@@ -1,0 +1,29 @@
+# 项目元信息和直接依赖，相当于 Java 项目的基础构建配置。
+[project]
+name = "shopmind-lab" # 项目名称，仅用于管理学习项目的依赖。
+version = "0.1.0" # 当前还处于环境准备阶段。
+description = "Learn LangChain through a Vue, FastAPI and MySQL after-sales assistant." # 项目用途。
+readme = "README.md" # 项目的说明入口。
+requires-python = ">=3.12,<3.13" # 固定使用 Python 3.12 系列，具体补丁版本见 .python-version。
+dependencies = [ # 这里只声明直接依赖，所有传递依赖的精确版本由 uv.lock 保存。
+    "fastapi>=0.115,<1", # 后续提供 HTTP API 与依赖注入。
+    "uvicorn>=0.34,<1", # 运行 FastAPI 的 ASGI 服务器。
+    "langchain>=1,<2", # 提供当前主线的模型、消息与 Agent 接口。
+    "pydantic-settings>=2,<3", # 从环境变量加载经过校验的后端配置。
+    "sqlalchemy>=2,<3", # 使用 Python ORM 与数据库事务。
+    "alembic>=1.14,<2", # 跟踪数据库表结构的迁移版本。
+    "pymysql>=1.1,<2", # 作为 SQLAlchemy 连接 MySQL 的驱动。
+    "cryptography>=44", # 支持 MySQL 驱动所需的加密认证能力。
+]
+
+# 开发依赖默认随 uv sync 安装，不属于业务功能。
+[dependency-groups]
+dev = [ # 后续按课程需要添加有意义的接口和业务验证。
+    "pytest>=8,<10", # 运行关键行为的自动化测试。
+    "httpx>=0.28,<1", # 支持 HTTP 联调与 FastAPI TestClient。
+]
+
+# 当前是应用项目，先管理依赖，不把仓库本身构建为 Python 安装包。
+[tool.uv]
+package = false # 后端源码目录会在后续骨架阶段创建。
+cache-dir = ".cache/uv" # .cache 是指向 E 盘的目录联接，下载缓存实际保存在 E 盘。

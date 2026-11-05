@@ -1,0 +1,23 @@
+# 这些目录是本机入口，实际虚拟环境、解释器和缓存放在 E 盘。
+.venv/
+.tools/
+
+# 依赖下载缓存和 Python 运行缓存可以重新生成。
+.cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# 本机密钥与环境配置不进入版本库，示例文件可以保留。
+.env
+.env.*
+!.env.example
+
+# 后续前端的依赖和构建输出。
+node_modules/
+dist/
+
+# 本机日志和运行数据。
+*.log
+runtime/
