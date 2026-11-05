@@ -105,3 +105,23 @@ git log -3 --oneline
 
 - 2026-11-05：整理阶段 0 分层、Prettier、IDEA 调试兼容与 Q01 DeepSeek 接入，建立双电脑交接流程；修正配置路径，确保从仓库根目录读取 `.env`。本机原配置在 `backend/.env`，已在根目录缺失时复制到根目录并保留原文件；以后维护根目录版本，两个文件均不提交。当前密钥有效性及真实服务尚未验收；下一步按第 5 节完成 Q01。
 - 本次提交前验证结果：后端 44 个文件格式检查通过，根目录配置定位断言通过，pytest 12 项通过（含真实 MySQL 集成）；前端 Prettier 检查与 TypeScript / Vite 构建通过，仅有已知包体大小提示。真实 DeepSeek 调用未执行。
+
+### 新电脑环境恢复记录
+
+- 2026-11-05：在另一台电脑将源码克隆到 `D:\learn\aiLearn`，通过本机已启用的 `127.0.0.1:7892` 代理完成 `git pull --ff-only`，远端无新增提交。代理仅作为 Git 单次命令参数使用，不修改共享 Git 配置。
+- 已将 uv 0.11.1、Python 3.12.13、虚拟环境、前端依赖及缓存安装到 `E:\ailearn-runtime\shopmind`。uv 使用官方发布压缩包并通过发布的 SHA256 校验；本机入口为 `E:\ailearn-runtime\shopmind\tools\uv\uv.exe`，未修改全局 PATH。项目 `.tools`、`.venv`、`.cache`、`frontend/node_modules` 均为指向 E 盘的目录联接，Python 按 `uv.lock`、前端通过 `scripts/install_frontend.ps1` 按 `package-lock.json` 安装。
+- 本机 Node.js 为 24.18.0，npm 为 11.16.0，实际 MySQL 服务端为 8.0.45。使用本机 `.env` 成功初始化 `langchain_lab` 和教学账号、订单；本机数据库密码及模型密钥未写入本文件或提交。
+- 已在后台启动后端 `http://127.0.0.1:8000` 与前端 `http://127.0.0.1:5173`，服务只监听本机地址。启动日志及进程信息位于项目已忽略的 `runtime` 目录；进程不随 Git 同步，电脑重启后需重新启动。
+- 本机验证：环境检查通过；后端 44 个文件格式检查通过，pytest 12 项通过（包含真实本机 MySQL 集成和离线模型适配测试）；前端 Prettier 检查、TypeScript 检查和 Vite 构建通过，仍有已知包体大小提示。实际 HTTP 验证了页面返回 200、后端健康、Vite `/api` 代理、alice 登录、订单 `DEMO-A001` 与会话列表接口。
+- 本机健康接口当前显示 `chat_mode=llm`、`model_name=deepseek-flash`、`model_configured=true`。本次没有发送真实模型请求，这些状态不代表密钥和供应商服务已验收；下一步仍按第 5 节完成 Q01 真实调用、断点观察及 SDK 对照。
+
+本机重新启动时，在仓库根目录执行以下命令；前端放在另一个终端运行。若已有服务占用端口，先核对 `runtime` 日志及进程，避免重复启动。
+
+```powershell
+# 直接使用项目虚拟环境，避免依赖全局 Python 或 uv 命令。
+& '.\.venv\Scripts\python.exe' '.\backend\run.py'
+
+# 另一终端进入前端目录，使用 E 盘依赖启动 Vite。
+Set-Location 'D:\learn\aiLearn\frontend'
+npm.cmd run dev -- --port 5173 --strictPort
+```
