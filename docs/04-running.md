@@ -35,6 +35,8 @@ npm.cmd run dev -- --port 5173 --strictPort
 3. 刷新页面，再点击左侧会话，从 MySQL 恢复消息。
 4. 退出并登录 bob，看到 `DEMO-B001` 音箱订单，无法看到 alice 的会话。
 
+当前工作台已改用流式接口：发送后用户消息立即出现，助手增量输出；生成期间可编辑下一条草稿，并可停止或切换会话。失败或取消的部分内容只在本次页面保留，完整结束并提交后才持久化。调试与验证见 [聊天交互与流式输出](08-streaming-chat.md)。
+
 数据库包含 users、access_tokens、orders、chat_sessions、chat_messages。密码保存加盐 scrypt 摘要；令牌保存 SHA256 摘要并设置到期时间。查询订单和会话始终附带认证用户归属条件。
 
 本阶段通过显式 `create_all` 建立初始基线。它不会迁移已有字段；后续表结构变更会接入 Alembic，不能靠重复运行初始化脚本更新列定义。

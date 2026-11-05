@@ -23,6 +23,10 @@ export interface ChatResponse {
   model: string | null // 实际使用的配置模型名，模拟模式为空。
   prompt_version: string // 本次请求使用的后端模板版本。
 } // 本次问答结果。
+export type ChatStreamEvent =
+  | { event: 'start'; data: Pick<ChatResponse, 'mode' | 'model' | 'prompt_version'> }
+  | { event: 'delta'; data: { text: string } }
+  | { event: 'done'; data: ChatResponse } // 业务层只处理经过解析的流事件。
 export interface HealthResponse {
   status: string
   database: string

@@ -129,10 +129,53 @@ h1 {
   border-radius: 16px;
 }
 .chat-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: calc(100vh - 150px);
   min-height: 450px;
+}
+/* 生成状态只出现在当前问答，不用全页禁用来代替反馈。 */
+.reply-pending {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--prompt-text-muted);
+}
+.waiting-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+}
+.stream-cursor {
+  color: var(--el-color-primary);
+}
+.message-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--prompt-error);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.message-state {
+  color: var(--prompt-text-muted);
+  font-size: 12px;
+}
+.generation-hint {
+  margin: 0;
+  padding: 8px 20px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--prompt-text-muted);
+}
+.scroll-latest {
+  position: absolute;
+  right: 24px;
+  bottom: 110px;
+  z-index: 1;
 }
 .panel-top {
   padding: 20px;

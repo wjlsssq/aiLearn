@@ -1,6 +1,7 @@
 """Q01：使用真实适配器和本机内存 HTTP 响应验证模型契约，不调用付费服务。"""
 
 import json  # 解析适配器实际发出的 HTTP 请求体。
+import asyncio  # 无需额外插件即可执行异步模型流验证。
 import httpx  # 用 MockTransport 替代外部网络。
 import pytest  # 参数化供应商和故障场景。
 from pydantic import SecretStr  # 测试凭据也保持脱敏展示。
@@ -198,3 +199,124 @@ def test_prompt_preview_matches_actual_model_messages(
         message.model_dump() for message in preview.messages
     ]
     assert reply.prompt_version == preview.version  # 版本与发送内容一起对齐。
+
+
+@pytest.mark.parametrize("provider", ["openai_compatible", "deepseek"])
+def test_real_async_adapters_stream_deltas(model_config, monkeypatch, provider):
+    monkeypatch.setattr(settings, "llm_provider", provider)
+    adapter = factory.ChatDeepSeek if provider == "deepseek" else factory.ChatOpenAI
+    requests = []
+    frames = []
+    for delta, finish in [
+        ({"role": "assistant", "content": "你好"}, None),
+        ({"content": " "}, None),
+        ({"content": "世界\n"}, None),
+        ({}, "stop"),
+    ]:
+        frames.append(
+            "data: "
+            + json.dumps(
+                {
+                    "id": "stream-test",
+                    "object": "chat.completion.chunk",
+                    "created": 0,
+                    "model": "test-chat-model",
+                    "choices": [{"index": 0, "delta": delta, "finish_reason": finish}],
+                }
+            )
+            + "\n\n"
+        )
+    payload = "".join(frames) + "data: [DONE]\n\n"
+
+    async def handle(request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(
+            200, headers={"content-type": "text/event-stream"}, content=payload.encode()
+        )
+
+    async def collect():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            name = "ChatDeepSeek" if provider == "deepseek" else "ChatOpenAI"
+            monkeypatch.setattr(
+                factory,
+                name,
+                lambda **options: adapter(**options, http_async_client=client),
+            )
+            return [
+                text
+                async for text in gateway.stream_reply(
+                    "流式问题", store_name="流式店", style="detailed"
+                )
+            ]
+
+    assert asyncio.run(collect()) == [
+        "你好",
+        " ",
+        "世界\n",
+    ]  # 空格不能因逐块 strip 丢失。
+    assert len(requests) == 1 and requests[0]["stream"] is True
+    assert requests[0]["messages"][-1]["content"] == "流式问题"
+
+
+def test_async_stream_timeout_is_safe(model_config, monkeypatch):
+    async def handle(request):
+        raise httpx.ReadTimeout("private-stream-detail", request=request)
+
+    async def collect():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            adapter = factory.ChatOpenAI
+            monkeypatch.setattr(
+                factory,
+                "ChatOpenAI",
+                lambda **options: adapter(**options, http_async_client=client),
+            )
+            return [text async for text in gateway.stream_reply("流式超时")]
+
+    with pytest.raises(BusinessError) as caught:
+        asyncio.run(collect())
+    assert caught.value.status_code == 504
+    assert "private-stream-detail" not in caught.value.message
+
+
+@pytest.mark.parametrize("broken_read", [False, True])
+def test_truncated_model_stream_is_not_success(model_config, monkeypatch, broken_read):
+    class TruncatedStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            chunk = {
+                "id": "cut",
+                "object": "chat.completion.chunk",
+                "created": 0,
+                "model": "test-chat-model",
+                "choices": [
+                    {
+                        "index": 0,
+                        "delta": {"content": "只有前半段"},
+                        "finish_reason": None,
+                    }
+                ],
+            }
+            yield ("data: " + json.dumps(chunk) + "\n\n").encode()
+            if broken_read:
+                raise httpx.ReadError(
+                    "private-stream-reset"
+                )  # 另一分支模拟干净 EOF 但缺结束标记。
+
+    async def handle(request):
+        return httpx.Response(
+            200, headers={"content-type": "text/event-stream"}, stream=TruncatedStream()
+        )
+
+    async def collect():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            adapter = factory.ChatOpenAI
+            monkeypatch.setattr(
+                factory,
+                "ChatOpenAI",
+                lambda **options: adapter(**options, http_async_client=client),
+            )
+            return [text async for text in gateway.stream_reply("截断测试")]
+
+    with pytest.raises(BusinessError) as caught:
+        asyncio.run(collect())
+    assert caught.value.status_code == 502
+    assert "private-stream-reset" not in caught.value.message

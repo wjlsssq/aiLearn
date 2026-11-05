@@ -53,11 +53,11 @@ PromptPanel 的预览事件
 
 ChatPanel 的发送事件
   → useWorkbench.send()
-  → POST /api/chat，附带 prompt 配置
+  → POST /api/chat/stream，附带 prompt 配置
   → ChatInput / PromptOptions 校验
   → services/chat.py：检查会话归属
   → gateway.generate_reply()
-  → build_chat_messages() → model.invoke(messages)
+  → build_chat_messages() → model.astream(messages) → SSE 增量
   → 成功后才提交会话与问答
 ```
 
@@ -169,7 +169,7 @@ for message in messages:  # 按顺序检查 system/human/ai/human。
 
 1. 在 `customer_service.py` 的 `format_messages(...)` 处打断点，从页面先点预览，观察 question、store_name、style。
 2. Step Over 后看返回的两条消息；预览流程会直接返回 HTTP，不经过 `model.invoke`。
-3. 从页面发送同一问题，在 `gateway.py` 的 `model.invoke(messages)` 处观察相同配置的消息。只有这一步才请求模型。
+3. 从页面发送同一问题，在 `gateway.py` 的 `model.astream(messages)` 处观察相同配置的消息与增量块。用户体验优化后页面已使用流式链路，普通 `/api/chat` 仍可观察同步 `invoke()`；完整差异见 [流式说明](../08-streaming-chat.md)。
 4. 修改系统要求时递增 `PROMPT_VERSION`，重启后端，再对同一组问题和预期行为回归。版本不由客户端传入。
 
 本课的版本存在代码、预览和本次聊天响应中，尚未把模板快照、风格和版本逐条存入消息表，因此不能仅凭历史会话完整重建当时输入。后续追踪模块再扩展；当前页面明确显示的是“最近问答模板”。

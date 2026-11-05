@@ -15,6 +15,8 @@ const {
   modelConfigured,
   busy,
   previewBusy,
+  sending,
+  retryMessageId,
   input,
   history,
   sessions,
@@ -31,6 +33,8 @@ const {
   logout,
   openSession,
   send,
+  stop,
+  retry,
   previewPrompt,
 } = useWorkbench() // 页面仅组合组件和绑定状态。
 </script>
@@ -78,12 +82,16 @@ const {
           v-model:input="input"
           :busy="busy"
           :preview-busy="previewBusy"
+          :sending="sending"
+          :retry-message-id="retryMessageId"
           :history="history"
           :chat-mode="chatMode"
           :model-name="modelName"
           :model-configured="modelConfigured"
           :prompt-valid="promptValid"
           @send="send"
+          @stop="stop"
+          @retry="retry"
         >
           <template #settings>
             <PromptPanel

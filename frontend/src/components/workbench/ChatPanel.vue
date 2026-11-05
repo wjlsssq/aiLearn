@@ -1,16 +1,47 @@
 <script setup lang="ts">
-import type { Message } from '../../types/api' // 消息 DTO。
-defineProps<{
+import { ref, watch, nextTick } from 'vue' // 增量更新时按用户阅读位置滚动。
+import type { ChatMessage } from '../../types/chat' // 消息正文与本地发送状态。
+const props = defineProps<{
   busy: boolean
   previewBusy: boolean
-  history: Message[]
+  sending: boolean
+  retryMessageId: string | null
+  history: ChatMessage[]
   chatMode: string
   modelName: string | null
   modelConfigured: boolean
   promptValid: boolean
 }>() // 父页面注入会话及模型状态，组件不读取环境配置。
 const input = defineModel<string>('input', { required: true }) // 同步输入，不在组件内请求接口。
-const emit = defineEmits<{ send: [] }>() // 点击发送或回车时通知业务流程。
+const emit = defineEmits<{ send: []; stop: []; retry: [id: string] }>() // 展示组件只发事件。
+const messagesElement = ref<HTMLElement | null>(null)
+const followLatest = ref(true) // 用户向上阅读后不强制拉回底部。
+function scrollToLatest() {
+  const element = messagesElement.value
+  if (element) element.scrollTop = element.scrollHeight
+  followLatest.value = true
+}
+function trackScroll() {
+  const element = messagesElement.value
+  if (element)
+    followLatest.value = element.scrollHeight - element.scrollTop - element.clientHeight < 64
+}
+watch(
+  [() => props.history, () => props.history.length],
+  async () => {
+    await nextTick()
+    scrollToLatest() // 切换历史或发送新问题时定位到最新消息。
+  },
+  { flush: 'post' },
+)
+watch(
+  () => props.history.at(-1)?.content,
+  async () => {
+    await nextTick()
+    if (followLatest.value) scrollToLatest() // 布局更新后再确认，尊重用户刚发生的滚动。
+  },
+  { flush: 'post' },
+)
 </script>
 <template>
   <section class="chat-panel">
@@ -31,8 +62,14 @@ const emit = defineEmits<{ send: [] }>() // 点击发送或回车时通知业务
     </div>
     <slot name="settings" />
     <div
+      ref="messagesElement"
       class="messages"
+      role="log"
+      aria-label="对话消息"
+      tabindex="0"
       aria-live="polite"
+      aria-relevant="additions"
+      @scroll="trackScroll"
     >
       <div
         v-if="!history.length"
@@ -63,14 +100,76 @@ const emit = defineEmits<{ send: [] }>() // 点击发送或回车时通知业务
       </div>
       <article
         v-for="(message, index) in history"
-        :key="index"
+        :key="message.localId ?? index"
         class="message"
         :class="message.role"
       >
         <span class="role">{{ message.role === 'user' ? '你' : 'ShopMind' }}</span>
-        <p>{{ message.content }}</p>
+        <p v-if="message.content">
+          {{ message.content }}
+          <span
+            v-if="message.status === 'streaming'"
+            class="stream-cursor"
+            aria-hidden="true"
+          >
+            ▍
+          </span>
+        </p>
+        <p
+          v-else-if="message.status === 'pending'"
+          class="reply-pending"
+          role="status"
+        >
+          <span
+            class="waiting-dot"
+            aria-hidden="true"
+          />
+          正在生成回复…
+        </p>
+        <div
+          v-if="message.role === 'assistant' && message.error"
+          class="message-feedback"
+          role="status"
+        >
+          <span>{{ message.error }}</span>
+          <el-button
+            v-if="message.localId === retryMessageId"
+            :disabled="sending || busy"
+            size="small"
+            @click="emit('retry', message.localId!)"
+          >
+            {{ message.status === 'stopped' ? '重新生成' : '重试' }}
+          </el-button>
+        </div>
+        <span
+          v-if="message.role === 'user' && message.status === 'pending'"
+          class="message-state"
+        >
+          发送中
+        </span>
+        <span
+          v-if="message.role === 'user' && message.status === 'error'"
+          class="message-state"
+        >
+          未确认保存
+        </span>
       </article>
     </div>
+    <el-button
+      v-if="!followLatest && history.length"
+      class="scroll-latest"
+      size="small"
+      @click="scrollToLatest"
+    >
+      回到最新消息
+    </el-button>
+    <p
+      v-if="sending"
+      class="generation-hint"
+      role="status"
+    >
+      正在回复，可继续输入下一条；切换会话将停止当前回复。
+    </p>
     <form
       class="composer"
       @submit.prevent="emit('send')"
@@ -83,10 +182,17 @@ const emit = defineEmits<{ send: [] }>() // 点击发送或回车时通知业务
         :disabled="busy"
       />
       <el-button
+        v-if="sending"
+        native-type="button"
+        @click="emit('stop')"
+      >
+        停止生成
+      </el-button>
+      <el-button
+        v-else
         type="primary"
         native-type="submit"
-        :loading="busy && !previewBusy"
-        :disabled="busy || !modelConfigured || !promptValid"
+        :disabled="busy || !modelConfigured || !promptValid || !input.trim()"
       >
         发送
       </el-button>

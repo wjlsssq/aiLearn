@@ -15,6 +15,7 @@
 - [双电脑交接与当前待办](docs/07-handoff.md)：每次修改前先拉取、阅读；完成后更新并随代码提交推送。
 - [Q01：模型调用与 LangChain 的作用](docs/lessons/Q01-langchain-models.md)：DeepSeek 配置、断点、SDK 对照与面试练习。
 - [Q02：Prompt 与消息角色](docs/lessons/Q02-prompt-messages.md)：店铺变量、风格切换、消息预览、模板版本和断点练习。
+- [聊天交互与流式输出](docs/08-streaming-chat.md)：即时用户消息、模型增量、停止生成、原位重试和保存边界。
 - [IDEA 启动与断点调试](docs/06-idea-debugging.md)：右键 backend/run.py 启动，逐步观察 HTTP 请求。
 - [代码规范与目录职责](docs/05-code-conventions.md)：Prettier、后端格式与分层要求；后续修改还须遵守根目录 AGENTS.md。
 - [项目启动与阶段 0 验收](docs/04-running.md)：登录、聊天、订单和测试命令。
@@ -31,6 +32,7 @@
 - 阶段 0 已实现：Vue 工作台、FastAPI、MySQL、登录、订单隔离、会话历史和模拟聊天。
 - Q01 已实现模型工厂、DeepSeek 调用和 SDK 对照脚本；真实模式由本机 .env 配置，真实服务验收与离线自动化测试分别记录。
 - Q02 已实现版本化客服 Prompt、店铺名称与简洁/详细风格配置、无需模型请求的消息预览；预览与聊天使用相同渲染函数。真实调用及风格效果由用户在 IDEA 调试验收。
+- 按用户体验要求提前接入 Q05 的流式基础：工作台通过 `/api/chat/stream` 接收真实模型增量，立即展示用户消息，支持停止、原位重试和下一条草稿；普通 `/api/chat` 继续保留，课程进度仍按 Q02 推进。
 - 页面明确区分模拟与真实模式；本课仅把当前问题发送给模型，多轮上下文在 Q04 学习。
 
 ## 快速检查 Python 环境

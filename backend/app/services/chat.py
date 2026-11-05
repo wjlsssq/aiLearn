@@ -1,7 +1,18 @@
 """会话归属、消息校验和问答事务。"""
 
 from sqlalchemy.orm import Session  # 当前业务事务。
-from ..ai.models.gateway import generate_reply  # 模型调用细节封装在 AI 集成层。
+from collections.abc import AsyncIterator  # 流式事件按需交付。
+from contextlib import aclosing  # 断开时关闭模型生成器。
+from dataclasses import dataclass  # 将预检查结果与请求数据库会话分开。
+import logging  # 未预期故障只记录类型，不回显供应商私密正文。
+from starlette.concurrency import run_in_threadpool  # 同步数据库写入不阻塞异步模型流。
+from ..ai.models.gateway import (
+    generate_reply,
+    stream_reply,
+)  # 模型调用细节封装在 AI 集成层。
+from ..ai.prompts.customer_service import PROMPT_VERSION  # 与预览使用同一模板版本。
+from ..core.config import settings  # 明确报告真实或模拟模式。
+from ..db.session import SessionLocal  # 流完成时才打开独立的写入事务。
 from ..core.errors import BusinessError  # 与框架解耦的业务错误。
 from ..models import ChatSession  # 标注已授权会话类型。
 from ..repositories import chat as repository  # SQL 均由 Repository 执行。
@@ -70,3 +81,68 @@ def send_message(
         model=result.model,
         prompt_version=result.prompt_version,
     )  # 使用明确的响应 DTO，API 层再次验证输出契约。
+
+
+@dataclass(frozen=True)
+class PreparedChat:
+    user_id: int  # 服务端认证身份，不从用户消息推断。
+    body: ChatInput  # 已通过 DTO 校验的本次请求快照。
+    content: str  # 去掉首尾空白的问题。
+
+
+def prepare_stream(db: Session, user_id: int, body: ChatInput) -> PreparedChat:
+    """在响应头发出前检查内容与归属，释放只读事务，不创建空会话。"""
+    content = body.message.strip()
+    if not content:
+        raise BusinessError(422, "消息不能为空")
+    if body.session_id is not None:
+        require_session(db, body.session_id, user_id)  # 越权不能触发模型调用。
+    prepared = PreparedChat(user_id=user_id, body=body, content=content)
+    db.rollback()  # 释放认证与归属查询的连接，模型生成期间不占数据库事务。
+    return prepared
+
+
+def persist_stream(prepared: PreparedChat, reply: str, metadata: dict) -> ChatResponse:
+    """仅在流完整结束后成对保存问答，提交成功后才能发送 done 事件。"""
+    with SessionLocal.begin() as db:
+        if prepared.body.session_id is None:
+            session = repository.create_session(
+                db, prepared.user_id, prepared.content[:40]
+            )
+        else:
+            session = require_session(db, prepared.body.session_id, prepared.user_id)
+        repository.add_exchange(db, session.id, prepared.content, reply)
+        response = ChatResponse(session_id=session.id, reply=reply, **metadata)
+    return response  # 事务上下文已经成功提交，避免把仅生成成功当作已保存。
+
+
+async def stream_message(prepared: PreparedChat) -> AsyncIterator[tuple[str, dict]]:
+    """产生 start/delta/done/error；取消和生成失败都不会保存未完成问答。"""
+    metadata = {
+        "mode": settings.chat_mode,
+        "model": settings.llm_model.strip() if settings.chat_mode == "llm" else None,
+        "prompt_version": PROMPT_VERSION,
+    }
+    yield "start", metadata  # 立即确认流已建立，客户端仍需等待 done 才能确认保存。
+    parts = []  # 只累计当前回答，成功前不创建会话或消息记录。
+    options = prepared.body.prompt.model_dump() if prepared.body.prompt else {}
+    try:
+        async with aclosing(stream_reply(prepared.content, **options)) as chunks:
+            async for text in chunks:
+                parts.append(text)
+                yield "delta", {"text": text}  # 立即转发模型块，不等待完整回复。
+        reply = "".join(parts).strip()
+        if not reply:
+            raise BusinessError(502, "模型未返回有效文本，请稍后重试")
+        response = await run_in_threadpool(persist_stream, prepared, reply, metadata)
+        yield "done", response.model_dump()  # 到此才同时确认模型完成与 MySQL 提交。
+    except BusinessError as error:
+        yield "error", {"status": error.status_code, "message": error.message}
+    except (
+        Exception
+    ) as error:  # CancelledError 属于 BaseException，不会被当成普通失败吞掉。
+        logging.getLogger(__name__).error("聊天流处理失败：%s", type(error).__name__)
+        yield (
+            "error",
+            {"status": 500, "message": "回复生成或保存失败，请重新打开会话核对后重试"},
+        )
