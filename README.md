@@ -1,5 +1,7 @@
 # ShopMind：用智能售后客服学习 LangChain
 
+> aiLearn · 个人ai学习
+
 面向有 Java 后端经验、Python 基础较少的学习者。目标是完成一个可演示的前后端项目，并能在面试中结合自己的实现解释 LangChain、RAG、Agent 和工程设计。
 
 ## 项目场景
