@@ -7,12 +7,22 @@ import sys  # 获取当前进程使用的解释器和 Python 版本。
 
 
 def main() -> None:  # 检查没有业务返回值；失败时抛出异常并以非零状态退出。
-    project_root = Path(__file__).resolve().parents[1]  # 从 scripts 目录向上定位仓库根目录。
-    expected_venv = project_root / ".venv"  # .venv 是项目入口，目录联接指向 E 盘的真实环境。
+    project_root = (
+        Path(__file__).resolve().parents[1]
+    )  # 从 scripts 目录向上定位仓库根目录。
+    expected_venv = (
+        project_root / ".venv"
+    )  # .venv 是项目入口，目录联接指向 E 盘的真实环境。
     if sys.version_info[:2] != (3, 12):  # 比较主次版本，防止误用系统 Python 3.8。
-        raise RuntimeError("Expected Python 3.12; use .venv/Scripts/python.exe.")  # 明确提示正确入口。
-    if Path(sys.prefix).resolve() != expected_venv.resolve():  # 解析目录联接后比较真实位置，核实项目环境。
-        raise RuntimeError("Expected the project's .venv virtual environment.")  # 防止把依赖装到其他环境。
+        raise RuntimeError(
+            "Expected Python 3.12; use .venv/Scripts/python.exe."
+        )  # 明确提示正确入口。
+    if (
+        Path(sys.prefix).resolve() != expected_venv.resolve()
+    ):  # 解析目录联接后比较真实位置，核实项目环境。
+        raise RuntimeError(
+            "Expected the project's .venv virtual environment."
+        )  # 防止把依赖装到其他环境。
     packages = {  # 左侧是发行包名，右侧是可导入的 Python 模块名，两者可能不同。
         "fastapi": "fastapi",  # 检查 HTTP 框架。
         "uvicorn": "uvicorn",  # 检查后端运行服务器。
@@ -28,14 +38,19 @@ def main() -> None:  # 检查没有业务返回值；失败时抛出异常并以
     }
     print(f"Python: {sys.version.split()[0]}")  # 打印实际解释器版本，便于核对环境。
     print(f"Executable: {sys.executable}")  # 打印实际运行路径，便于排查命令入口问题。
-    print(f"Physical executable: {Path(sys.executable).resolve()}")  # 打印 E 盘的真实文件位置。
+    print(
+        f"Physical executable: {Path(sys.executable).resolve()}"
+    )  # 打印 E 盘的真实文件位置。
     print(f"Base Python: {sys.base_prefix}")  # 确认基础解释器也使用 E 盘安装。
     for distribution, module_name in packages.items():  # 依次验证每个基础依赖。
         import_module(module_name)  # 真正加载模块，缺失或不兼容时立即失败。
         print(f"{distribution}: {version(distribution)}")  # 输出锁定后实际安装的版本。
     from langchain.agents import create_agent  # 验证后续课程要使用的当前 Agent 入口。
+
     if not callable(create_agent):  # 检查导入对象确实可以作为函数调用。
-        raise RuntimeError("LangChain create_agent is unavailable.")  # 接口不符合预期时明确失败。
+        raise RuntimeError(
+            "LangChain create_agent is unavailable."
+        )  # 接口不符合预期时明确失败。
     print("Environment check passed.")  # 所有环境检查完成后输出成功标记。
 
 

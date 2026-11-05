@@ -78,7 +78,7 @@ deactivate
 
 已安装 FastAPI、Uvicorn、LangChain、Pydantic Settings、SQLAlchemy、Alembic、PyMySQL、Cryptography，以及开发工具 pytest、httpx。LangGraph 随 LangChain 的依赖链安装。
 
-模型供应商专用包将在对应课程选择服务后添加；当前检查不需要 API Key，也不会发起模型调用。
+Q01 已添加 langchain-deepseek、langchain-openai 和 openai，用于模型适配与 SDK 对照。环境检查本身不需要 API Key，也不会发起模型调用。
 
 ```powershell
 # 查看项目环境中所有实际安装的包。

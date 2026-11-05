@@ -1,7 +1,7 @@
 # 项目元信息和直接依赖，相当于 Java 项目的基础构建配置。
 [project]
 name = "shopmind-lab" # 项目名称，仅用于管理学习项目的依赖。
-version = "0.1.0" # 当前还处于环境准备阶段。
+version = "0.1.0" # 学习项目按课程模块递进实现。
 description = "Learn LangChain through a Vue, FastAPI and MySQL after-sales assistant." # 项目用途。
 readme = "README.md" # 项目的说明入口。
 requires-python = ">=3.12,<3.13" # 固定使用 Python 3.12 系列，具体补丁版本见 .python-version。
@@ -14,6 +14,9 @@ dependencies = [ # 这里只声明直接依赖，所有传递依赖的精确版�
     "alembic>=1.14,<2", # 跟踪数据库表结构的迁移版本。
     "pymysql>=1.1,<2", # 作为 SQLAlchemy 连接 MySQL 的驱动。
     "cryptography>=44", # 支持 MySQL 驱动所需的加密认证能力。
+    "langchain-openai>=1,<2", # 标准兼容协议的 LangChain 模型适配。
+    "openai>=2,<3", # 供应商 SDK 对照实验及标准请求异常。
+    "langchain-deepseek>=1.1.1", # DeepSeek 官方服务的 LangChain 专用适配。
 ]
 
 # 开发依赖默认随 uv sync 安装，不属于业务功能。
@@ -21,9 +24,19 @@ dependencies = [ # 这里只声明直接依赖，所有传递依赖的精确版�
 dev = [ # 后续按课程需要添加有意义的接口和业务验证。
     "pytest>=8,<10", # 运行关键行为的自动化测试。
     "httpx>=0.28,<1", # 支持 HTTP 联调与 FastAPI TestClient。
+    "ruff>=0.17.3", # 后端格式检查和格式化，精确版本保存在 uv.lock。
 ]
 
 # 当前是应用项目，先管理依赖，不把仓库本身构建为 Python 安装包。
 [tool.uv]
 package = false # 后端源码目录会在后续骨架阶段创建。
 cache-dir = ".cache/uv" # .cache 是指向 E 盘的目录联接，下载缓存实际保存在 E 盘。
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+default = true
+
+# Python 使用四空格缩进和统一格式；前端由 Prettier 管理。
+[tool.ruff]
+target-version = "py312" # 与项目解释器版本保持一致。
+line-length = 88 # 使用 Ruff 默认行宽，长注释按实际阅读需要组织。

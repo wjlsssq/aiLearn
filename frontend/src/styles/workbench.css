@@ -1,0 +1,262 @@
+/* 基础色彩与尺寸统一定义，保证工作台视觉一致。 */
+:root {
+  font-family: Inter, 'Microsoft YaHei', sans-serif;
+  color: #203a36;
+  background: #f3f6f4;
+  --el-color-primary: #267966;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button {
+  font: inherit;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+.workspace {
+  display: flex;
+  min-height: 100vh;
+}
+.sidebar {
+  width: 245px;
+  background: #173d35;
+  color: #fff;
+  padding: 30px 22px;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.brand {
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.brand > span {
+  font-size: 23px;
+}
+.sidebar .muted {
+  color: #abc7bd;
+  font-size: 12px;
+  margin-top: 14px;
+}
+.stage {
+  font-size: 12px;
+  border: 1px solid #51776b;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 22px 0;
+}
+.section-label {
+  font-size: 12px;
+  color: #abc7bd;
+  margin: 30px 0 10px;
+}
+.session {
+  border: 0;
+  background: transparent;
+  color: #cde2d9;
+  text-align: left;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session.active,
+.session:hover {
+  background: #30584c;
+}
+.sidebar-bottom {
+  margin-top: auto;
+  padding-top: 50px;
+  font-size: 12px;
+  line-height: 2;
+  color: #abc7bd;
+}
+main {
+  flex: 1;
+  min-width: 0;
+  padding: 34px 40px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+h1 {
+  font-size: 27px;
+  margin-bottom: 0;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #66847a;
+}
+.status {
+  font-size: 12px;
+  color: #477b66;
+}
+.muted {
+  font-size: 13px;
+  color: #7b8e86;
+  line-height: 1.8;
+}
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 24px;
+}
+.chat-panel,
+.details,
+.login-card {
+  background: #fff;
+  border: 1px solid #e2eae4;
+  border-radius: 16px;
+}
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 150px);
+  min-height: 450px;
+}
+.panel-top {
+  padding: 20px;
+  border-bottom: 1px solid #edf1ed;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+.messages {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+.welcome {
+  text-align: center;
+  margin: 70px auto;
+  color: #526f63;
+}
+.welcome h2 {
+  font-size: 23px;
+}
+.welcome > p {
+  font-size: 13px;
+  margin-top: 20px;
+}
+.spark {
+  font-size: 44px;
+  color: #38927a;
+  margin-bottom: 20px;
+}
+.composer {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #edf1ed;
+}
+.message {
+  max-width: 90%;
+  margin-bottom: 22px;
+}
+.message.user {
+  margin-left: auto;
+  text-align: right;
+}
+.role {
+  font-size: 11px;
+  color: #81948a;
+}
+.message p {
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: #f1f5f2;
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 8px;
+}
+.message.user p {
+  background: #e0f1e9;
+  text-align: left;
+}
+.details {
+  align-self: start;
+  padding-bottom: 20px;
+}
+.details > .muted,
+.details > .el-button {
+  margin: 20px;
+}
+.order {
+  padding: 20px;
+  border-bottom: 1px solid #edf1ed;
+}
+.order small {
+  color: #87988e;
+}
+.order h3 {
+  font-size: 15px;
+  margin: 12px 0;
+}
+.order p {
+  font-size: 12px;
+  color: #348365;
+  margin: 0;
+}
+.login-card {
+  max-width: 480px;
+  margin: 60px auto;
+  padding: 36px;
+}
+.login-card h2 {
+  margin: 20px 0;
+}
+.login-card .el-form {
+  margin-top: 30px;
+}
+@media (max-width: 1050px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+  .details {
+    display: block;
+  }
+  .sidebar {
+    width: 210px;
+  }
+  main {
+    padding: 25px;
+  }
+}
+@media (max-width: 650px) {
+  .sidebar {
+    display: none;
+  }
+  main {
+    padding: 18px;
+  }
+  .status {
+    max-width: 130px;
+  }
+  .chat-panel {
+    height: calc(100vh - 130px);
+  }
+  .login-card {
+    padding: 24px;
+    margin: 20px auto;
+  }
+}

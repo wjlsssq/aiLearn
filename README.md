@@ -12,6 +12,10 @@
 
 ## 计划入口
 
+- [双电脑交接与当前待办](docs/07-handoff.md)：每次修改前先拉取、阅读；完成后更新并随代码提交推送。
+- [Q01：模型调用与 LangChain 的作用](docs/lessons/Q01-langchain-models.md)：DeepSeek 配置、断点、SDK 对照与面试练习。
+- [IDEA 启动与断点调试](docs/06-idea-debugging.md)：右键 backend/run.py 启动，逐步观察 HTTP 请求。
+- [代码规范与目录职责](docs/05-code-conventions.md)：Prettier、后端格式与分层要求；后续修改还须遵守根目录 AGENTS.md。
 - [项目启动与阶段 0 验收](docs/04-running.md)：登录、聊天、订单和测试命令。
 - [Python 3.12 环境与使用方法](docs/00-environment.md)：解释器、虚拟环境、依赖和环境重建。
 - [项目与学习计划](docs/01-project-plan.md)：技术栈、阶段安排、数据库、注释与教学规范。
@@ -24,7 +28,8 @@
 - 环境已准备：Python 3.12.13、虚拟环境和依赖缓存实际存放在 `E:\ailearn-runtime\shopmind`；根目录 `.venv` 等入口通过目录联接访问 E 盘，依赖版本保存在 `uv.lock`。
 - 数据库已确认：本机 MySQL 8.0.35 可连接。
 - 阶段 0 已实现：Vue 工作台、FastAPI、MySQL、登录、订单隔离、会话历史和模拟聊天。
-- 下一步：Q01，模型适配与真实客服聊天。当前聊天明确为模拟响应。
+- Q01 已实现模型工厂、DeepSeek 调用和 SDK 对照脚本；真实模式由本机 .env 配置，等待填写 API Key 后验收与学习练习。
+- 页面明确区分模拟与真实模式；本课仅把当前问题发送给模型，多轮上下文在 Q04 学习。
 
 ## 快速检查 Python 环境
 

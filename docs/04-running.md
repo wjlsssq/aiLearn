@@ -4,6 +4,8 @@
 
 ## 启动
 
+使用 IDEA 学习时可右键 `backend/run.py` 选择 Debug，详见 [IDEA 断点调试](06-idea-debugging.md)。下面为终端启动方式，两种方式选择一种运行后端。
+
 项目已有本机 `.env`，数据库密码不会提交到版本库。其他机器先复制 `.env.example` 为 `.env`，填写 MySQL 连接配置。
 
 第一个 PowerShell 终端，在项目根目录执行：
@@ -24,7 +26,7 @@ Set-Location 'C:\Users\27959\Desktop\ailearn\frontend'
 npm.cmd run dev -- --port 5173 --strictPort
 ```
 
-访问 [客服工作台](http://127.0.0.1:5173)。教学账号 `alice` 和 `bob`，密码均为 `Learn123!`。这是本机教学版本，使用合成订单与明确标识的模拟回复。
+访问 [客服工作台](http://127.0.0.1:5173)。教学账号 `alice` 和 `bob`，密码均为 `Learn123!`。阶段 0 验收使用合成订单和模拟回复；当前已进入 [Q01](lessons/Q01-langchain-models.md)，模型模式以 `.env` 为准，真实调用需填写用户自己的 DeepSeek Key。
 
 ## 观察数据闭环
 
@@ -52,11 +54,11 @@ npm.cmd run build
 
 ## 第一轮代码阅读
 
-从 `frontend/src/App.vue` 的 `send()` 开始，追踪请求至 `backend/app/main.py` 的 `chat()`，再观察 `get_db()` 如何注入数据库会话，以及 `ChatSession`、`ChatMessage` 如何映射表。
+从 `frontend/src/composables/useWorkbench.ts` 的 `send()` 开始，追踪 `api/chat.ts` 和 `api/client.ts`，再进入 `backend/app/api/routes/chat.py` → `services/chat.py` → `repositories/chat.py`。观察 `db/session.py` 的 `get_db()` 如何注入数据库会话，以及 `models/entities.py` 中的 `ChatSession`、`ChatMessage` 如何映射表。
 
-Java 对照：FastAPI 路由类似 Controller，Pydantic 请求类类似 DTO，Depends 类似依赖注入，SQLAlchemy Session 承载事务，模型类类似 Entity。这里先用少量文件看清请求闭环，后续课程再把 AI 调用和业务处理拆到 Service。
+Java 对照：FastAPI 路由类似 Controller，Pydantic 请求类类似 DTO，Depends 类似依赖注入，SQLAlchemy Session 承载事务，模型类类似 Entity。Service 负责业务规则和事务，Repository 负责数据访问。具体职责见 [代码规范](05-code-conventions.md)。
 
-本课先理解：消息能保存到数据库，不代表模型已经拥有记忆。当前没有请求任何模型；Q01 将开始接入真实聊天模型，Q04 才进一步组织多轮上下文。
+本课先理解：消息能保存到数据库，不代表模型已经拥有记忆。阶段 0 使用模拟回复，Q01 接入真实聊天模型，Q04 再组织多轮上下文。
 
 ## 本次验收记录
 
