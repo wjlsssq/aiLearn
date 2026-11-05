@@ -5,10 +5,10 @@ from openai import OpenAI, OpenAIError  # 直接使用兼容协议 SDK。
 from backend.app.core.config import settings  # 与 Web 应用共用同一份本机配置。
 from backend.app.core.errors import BusinessError  # 统一显示安全的配置错误。
 from backend.app.ai.models.factory import is_model_configured  # 不发请求的配置校验。
-from backend.app.ai.models.gateway import (
-    SYSTEM_INSTRUCTION,
-    generate_reply,
-)  # 统一问题边界，便于对比。
+from backend.app.ai.models.gateway import generate_reply  # 统一问题边界，便于对比。
+from backend.app.ai.prompts.customer_service import (
+    build_chat_messages,
+)  # 共享默认模板。
 
 
 def main() -> None:  # 通过模块方式执行：python -m scripts.compare_chat_models。
@@ -43,9 +43,12 @@ def main() -> None:  # 通过模块方式执行：python -m scripts.compare_chat
                 response = client.chat.completions.create(
                     model=settings.llm_model,
                     messages=[
-                        {"role": "system", "content": SYSTEM_INSTRUCTION},
-                        {"role": "user", "content": args.message},
-                    ],
+                        {
+                            "role": "system" if message.type == "system" else "user",
+                            "content": str(message.content),
+                        }
+                        for message in build_chat_messages(args.message)
+                    ],  # SDK 对照复用同一模板，随后显式组织供应商协议字段。
                     temperature=settings.llm_temperature,
                     max_tokens=settings.llm_max_tokens,
                     extra_body={"thinking": {"type": "disabled"}}

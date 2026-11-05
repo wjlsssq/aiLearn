@@ -1,7 +1,6 @@
 """Q01：业务层与模型之间的单次问答边界。"""
 
 from dataclasses import dataclass  # 用小型不可变结果对象隔离模型返回结构。
-from langchain_core.messages import HumanMessage, SystemMessage  # 使用统一消息类型。
 from openai import (
     APIConnectionError,
     APIStatusError,
@@ -13,8 +12,12 @@ from openai import (
 from ...core.config import settings  # 当前运行模式。
 from ...core.errors import BusinessError  # 不向客户端泄露供应商原始错误。
 from .factory import create_chat_model  # 供应商差异集中在工厂中。
-
-SYSTEM_INSTRUCTION = "你是 ShopMind 售后客服学习项目的助手。用中文简洁回答。目前没有连接店铺知识库、订单查询或售后工具；不要声称已查到订单、规则或执行操作。缺少店铺依据时说明需要补充信息。"  # 仅声明当前功能边界，Q02 再研究模板设计。
+from ..prompts.customer_service import (
+    DEFAULT_STORE_NAME,
+    PROMPT_VERSION,
+    PromptStyle,
+    build_chat_messages,
+)  # 系统指令与消息角色由业务模板统一维护。
 
 
 @dataclass(frozen=True)  # 结果创建后不再被业务层修改。
@@ -22,11 +25,20 @@ class ModelReply:
     text: str  # 可保存的正文。
     mode: str  # mock 或 llm，避免把模拟数据冒充真实调用。
     model: str | None = None  # 真实调用的配置模型名。
+    prompt_version: str = (
+        PROMPT_VERSION  # 显式模拟也返回渲染模板版本，不代表请求了模型。
+    )
 
 
 def generate_reply(
     content: str,
+    *,
+    store_name: str = DEFAULT_STORE_NAME,
+    style: PromptStyle = "concise",
 ) -> ModelReply:  # 本课只接受当前问题，不读取历史或订单。
+    messages = build_chat_messages(
+        content, store_name=store_name, style=style
+    )  # 模拟和真实模式共用模板；只有后者会发送网络请求。
     if settings.chat_mode == "mock":  # 明确配置模拟模式时才使用固定回复。
         return ModelReply(
             text=f"【模拟回复】已收到：{content}。在 .env 配置模型并设置 CHAT_MODE=llm 后，可学习真实 LangChain 调用。",
@@ -34,10 +46,6 @@ def generate_reply(
         )  # 保留无需凭据的联调能力。
     try:  # 将供应商网络错误转换为稳定业务错误。
         model = create_chat_model()  # 获得统一聊天接口，构造本身不发送聊天请求。
-        messages = [
-            SystemMessage(content=SYSTEM_INSTRUCTION),
-            HumanMessage(content=content),
-        ]  # 历史暂不加入上下文。
         result = model.invoke(messages)  # 核心调用：输入消息列表，得到 AIMessage。
     except (AuthenticationError, PermissionDeniedError):  # 处理无效凭据或权限不足。
         raise BusinessError(

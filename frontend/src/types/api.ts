@@ -21,6 +21,7 @@ export interface ChatResponse {
   reply: string
   mode: string
   model: string | null // 实际使用的配置模型名，模拟模式为空。
+  prompt_version: string // 本次请求使用的后端模板版本。
 } // 本次问答结果。
 export interface HealthResponse {
   status: string
@@ -29,3 +30,14 @@ export interface HealthResponse {
   model_name: string | null // 后端当前模型标识。
   model_configured: boolean // 必需字段是否齐全，不代表已验证密钥有效。
 } // 服务状态。
+
+export type PromptStyle = 'concise' | 'detailed' // 仅允许后端支持的回答风格。
+export interface PromptOptions {
+  store_name: string // 必填店铺名称，只作为业务标签。
+  style: PromptStyle // 系统风格指令由后端映射。
+}
+export interface PromptPreview {
+  template_id: string // 当前业务模板标识。
+  version: string // 由后端维护的模板版本。
+  messages: { role: 'system' | 'user'; content: string }[] // 完整消息，以文本呈现。
+}

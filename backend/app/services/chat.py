@@ -49,8 +49,9 @@ def send_message(
         raise BusinessError(422, "消息不能为空")  # 空白内容不会写入数据库。
     if body.session_id is not None:  # 先授权，防止为越权请求发起收费模型调用。
         require_session(db, body.session_id, user_id)  # 当前用户不能使用其他人的会话。
+    prompt_options = body.prompt.model_dump() if body.prompt is not None else {}
     result = generate_reply(
-        content
+        content, **prompt_options
     )  # 先取得有效回复，再开始新增记录，避免失败留下空会话。
     if body.session_id is None:  # 首次发送时创建会话。
         session = repository.create_session(
@@ -63,5 +64,9 @@ def send_message(
     )  # 只保存已经成功生成的问答。
     db.commit()  # 会话和问答一起提交，异常由会话依赖回滚。
     return ChatResponse(
-        session_id=session.id, reply=result.text, mode=result.mode, model=result.model
+        session_id=session.id,
+        reply=result.text,
+        mode=result.mode,
+        model=result.model,
+        prompt_version=result.prompt_version,
     )  # 使用明确的响应 DTO，API 层再次验证输出契约。

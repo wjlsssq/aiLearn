@@ -53,11 +53,29 @@ def test_database_auth_chat_and_isolation(
                 == "DEMO-B001"
             )  # Bob 看到另一组数据。
             response = client.post(
-                "/api/chat", headers=alice, json={"message": "integration-check"}
+                "/api/chat",
+                headers=alice,
+                json={
+                    "message": "integration-check",
+                },
             )  # 创建测试会话。
             assert response.status_code == 200  # 问答入库成功。
             session_id = response.json()["session_id"]  # 记录待清理主键。
             assert response.json()["mode"] == "mock"  # 响应明确为模拟模式。
+            assert (
+                response.json()["prompt_version"] == "1.0.0"
+            )  # 旧 Q01 调用使用默认模板。
+            configured = client.post(
+                "/api/chat",
+                headers=alice,
+                json={
+                    "message": "configured-prompt-check",
+                    "session_id": session_id,
+                    "prompt": {"store_name": "集成测试店", "style": "detailed"},
+                },
+            )  # 在同一会话验证新配置的真实 API 与事务路径。
+            assert configured.status_code == 200 and configured.json()["mode"] == "mock"
+            assert configured.json()["prompt_version"] == "1.0.0"
             failure_message = (
                 "model-failure-" + uuid.uuid4().hex[:12]
             )  # 本次检查的唯一消息。
@@ -110,6 +128,8 @@ def test_database_auth_chat_and_isolation(
                 f"/api/sessions/{session_id}/messages", headers=alice
             ).json()  # 从 MySQL 恢复历史。
             assert [row["role"] for row in history] == [
+                "user",
+                "assistant",
                 "user",
                 "assistant",
             ]  # 被拒绝的跨用户消息没有写入。

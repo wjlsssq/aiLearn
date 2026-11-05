@@ -2,10 +2,12 @@
 import type { Message } from '../../types/api' // 消息 DTO。
 defineProps<{
   busy: boolean
+  previewBusy: boolean
   history: Message[]
   chatMode: string
   modelName: string | null
   modelConfigured: boolean
+  promptValid: boolean
 }>() // 父页面注入会话及模型状态，组件不读取环境配置。
 const input = defineModel<string>('input', { required: true }) // 同步输入，不在组件内请求接口。
 const emit = defineEmits<{ send: [] }>() // 点击发送或回车时通知业务流程。
@@ -27,6 +29,7 @@ const emit = defineEmits<{ send: [] }>() // 点击发送或回车时通知业务
         }}
       </el-tag>
     </div>
+    <slot name="settings" />
     <div
       class="messages"
       aria-live="polite"
@@ -37,8 +40,13 @@ const emit = defineEmits<{ send: [] }>() // 点击发送或回车时通知业务
       >
         <div class="spark">✦</div>
         <h2>你好，有什么可以帮你？</h2>
-        <p>Q01：从当前问题到模型回复，观察 LangChain 的调用过程。</p>
-        <el-button @click="input = '你能帮助我做哪些事情？'">你能帮助我做哪些事情？</el-button>
+        <p>Q02：切换回答风格，预览真正发送给模型的消息。</p>
+        <el-button
+          :disabled="busy"
+          @click="input = '你能帮助我做哪些事情？'"
+        >
+          你能帮助我做哪些事情？
+        </el-button>
         <p class="muted">
           {{
             chatMode === 'llm'
@@ -72,13 +80,13 @@ const emit = defineEmits<{ send: [] }>() // 点击发送或回车时通知业务
         aria-label="输入消息"
         placeholder="输入你的问题…"
         :maxlength="2000"
-        :disabled="busy || !modelConfigured"
+        :disabled="busy"
       />
       <el-button
         type="primary"
         native-type="submit"
-        :loading="busy"
-        :disabled="!modelConfigured"
+        :loading="busy && !previewBusy"
+        :disabled="busy || !modelConfigured || !promptValid"
       >
         发送
       </el-button>

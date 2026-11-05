@@ -158,4 +158,4 @@ uv run --locked python -m scripts.compare_chat_models --implementation langchain
 - [ ] 分别运行一次 SDK 与 LangChain 对照。
 - [ ] 用自己的话回答本课主问题，并解释一次失败场景。
 
-本课完成后再进入 Q02：可维护的 Prompt 与消息角色，不提前叠加多轮记忆和 RAG。
+本课完成后再进入 [Q02：可维护的 Prompt 与消息角色](Q02-prompt-messages.md)，不提前叠加多轮记忆和 RAG。Q02 代码已把固定系统说明迁入 `app/ai/prompts/customer_service.py`，阅读当前代码时可沿共享模板继续追踪。

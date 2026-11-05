@@ -3,6 +3,7 @@ import SessionSidebar from '../components/workbench/SessionSidebar.vue' // 会�
 import LoginForm from '../components/workbench/LoginForm.vue' // 登录表单。
 import ChatPanel from '../components/workbench/ChatPanel.vue' // 对话展示与输入。
 import OrderPanel from '../components/workbench/OrderPanel.vue' // 模拟订单展示。
+import PromptPanel from '../components/workbench/PromptPanel.vue' // Q02：模板配置与消息预览。
 import { useWorkbench } from '../composables/useWorkbench' // 业务状态和操作统一入口。
 const {
   username,
@@ -13,16 +14,24 @@ const {
   modelName,
   modelConfigured,
   busy,
+  previewBusy,
   input,
   history,
   sessions,
   orders,
   sessionId,
+  storeName,
+  promptStyle,
+  promptPreview,
+  previewVisible,
+  lastPromptVersion,
+  promptValid,
   newSession,
   login,
   logout,
   openSession,
   send,
+  previewPrompt,
 } = useWorkbench() // 页面仅组合组件和绑定状态。
 </script>
 <template>
@@ -68,12 +77,28 @@ const {
         <ChatPanel
           v-model:input="input"
           :busy="busy"
+          :preview-busy="previewBusy"
           :history="history"
           :chat-mode="chatMode"
           :model-name="modelName"
           :model-configured="modelConfigured"
+          :prompt-valid="promptValid"
           @send="send"
-        />
+        >
+          <template #settings>
+            <PromptPanel
+              v-model:store-name="storeName"
+              v-model:style="promptStyle"
+              v-model:visible="previewVisible"
+              :busy="busy"
+              :preview-busy="previewBusy"
+              :has-question="Boolean(input.trim())"
+              :preview="promptPreview"
+              :last-version="lastPromptVersion"
+              @preview="previewPrompt"
+            />
+          </template>
+        </ChatPanel>
         <OrderPanel
           :orders="orders"
           :busy="busy"

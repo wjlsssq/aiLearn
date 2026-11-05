@@ -167,3 +167,34 @@ def test_missing_key_is_rejected_before_network(
     with pytest.raises(BusinessError) as caught:  # 工厂不创建网络请求。
         gateway.generate_reply("测试配置")  # 请求在配置检查阶段失败。
     assert caught.value.status_code == 503  # 模型尚未准备好。
+
+
+@pytest.mark.parametrize("provider", ["openai_compatible", "deepseek"])
+@pytest.mark.parametrize("style", ["concise", "detailed"])
+def test_prompt_preview_matches_actual_model_messages(
+    model_config, monkeypatch, provider, style
+):
+    """预览必须等于真实适配器发出的消息，而非只测试两个函数各自能运行。"""
+    from backend.app.schemas.prompt import PromptPreviewInput  # 本课真实请求 DTO。
+    from backend.app.services.prompt import preview_prompt  # 本课预览服务。
+
+    monkeypatch.setattr(settings, "llm_provider", provider)  # 覆盖两种协议适配器。
+    requests = []  # 接收内存 HTTP 请求体。
+
+    def handle(request):
+        requests.append(json.loads(request.content))  # 观察序列化之后的实际消息。
+        return httpx.Response(200, json=completion())
+
+    body = PromptPreviewInput(
+        message="问题里有 {unknown}", store_name="对照店", style=style
+    )
+    preview = preview_prompt(body)  # 不请求供应商、不创建业务记录。
+    with install_transport(monkeypatch, handle):
+        reply = gateway.generate_reply(
+            body.message, store_name=body.store_name, style=body.style
+        )
+    assert len(requests) == 1  # 只有网关发起一次内存请求。
+    assert requests[0]["messages"] == [
+        message.model_dump() for message in preview.messages
+    ]
+    assert reply.prompt_version == preview.version  # 版本与发送内容一起对齐。

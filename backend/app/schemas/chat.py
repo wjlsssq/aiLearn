@@ -1,11 +1,13 @@
 """聊天与会话接口的数据契约。"""
 
 from pydantic import BaseModel, Field  # DTO 类型和输入校验。
+from .prompt import PromptOptions  # 复用预览与真实聊天的配置校验。
 
 
 class ChatInput(BaseModel):  # 单次聊天请求 DTO。
     message: str = Field(min_length=1, max_length=2000)  # 防止无限大的消息入库。
     session_id: int | None = None  # 不传表示建立新会话。
+    prompt: PromptOptions | None = None  # Q01 调用可省略，使用后端默认店铺与风格。
 
 
 class ChatResponse(BaseModel):  # 聊天接口响应。
@@ -13,6 +15,7 @@ class ChatResponse(BaseModel):  # 聊天接口响应。
     reply: str  # 本次助手回复。
     mode: str  # 明确标注 mock 或 llm。
     model: str | None = None  # 真实调用时返回配置的模型名。
+    prompt_version: str  # 返回本次使用的服务端模板版本，不由前端指定。
 
 
 class SessionResponse(BaseModel):  # 左侧会话列表项。

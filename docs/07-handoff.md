@@ -20,7 +20,7 @@ git log -3 --oneline
 
 ## 2. 用户目标与学习方式
 
-- 用户有 Java / 后端经验，Python 较少，当前基础代码已理解，开始 Q01。
+- 用户有 Java / 后端经验，Python 较少，已阅读 Q01 调用链与 SDK 对照讲解，主动要求进入 Q02。
 - 通过智能电商售后客服 ShopMind 学习 LangChain，以 20 道面试题对应逐步实现的功能模块。
 - 交流、讲义和手写注释用中文。教学核心代码逐行解释用途、数据流与设计原因，用 Java 概念帮助理解。
 - 每课先看功能与调用链，再断点、对照实验与面试表达。不要一次推进后续所有模块。
@@ -34,6 +34,7 @@ git log -3 --oneline
 - 前端按页面、组件、composable、API、类型、工具和样式拆分，接入 Prettier；后端按 API → Service → Repository → ORM/DB 分层。
 - IDEA 调试入口 `backend/run.py`：单进程、关闭热重载，通过 `asyncio.Runner` 启动服务，绕开 IDEA 2025.1 的旧 pydevd 与 Uvicorn `loop_factory` 参数不兼容问题。
 - Q01：模型工厂与网关、DeepSeek 专用 LangChain 适配器、标准兼容适配器、SDK 对照脚本、模型状态展示、安全错误映射和测试。
+- Q02：版本化客服 ChatPromptTemplate、店铺名称与简洁/详细风格配置、受认证保护的消息预览；预览与真实聊天使用相同渲染函数，并返回服务端模板版本。
 - 用户已选择 DeepSeek。示例配置使用 `LLM_PROVIDER=deepseek`、`https://api.deepseek.com`、`deepseek-flash`；具体可用模型需以用户账号及供应商当前文档为准。
 
 ### 尚未验收
@@ -71,7 +72,14 @@ git log -3 --oneline
 
 ## 5. 代码入口与下一步
 
-按 [Q01 讲义](lessons/Q01-langchain-models.md) 继续：
+当前课程按 [Q02 讲义](lessons/Q02-prompt-messages.md) 继续。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
+
+1. 在页面输入问题和店铺名称，切换简洁/详细风格，先用“预览消息”比较 system 与 user；预览不调用模型。
+2. 在 `app/ai/prompts/customer_service.py` 的 `format_messages(...)` 处观察变量和返回消息；再在 `app/ai/models/gateway.py` 的 `model.invoke(messages)` 处对照。
+3. 按讲义完成必填变量、字面花括号、Few-shot 和模板版本练习；真实风格效果由用户实际发送后验收。
+4. 模板配置暂只存在当前页面与本次请求，历史聊天不恢复模板快照。Q02 代码完成不代表用户练习已完成；理解后再进入 Q03，不提前添加多轮历史和 RAG。
+
+Q01 的真实服务结果仍未由本次代理确认；如尚未完成，可按 [Q01 讲义](lessons/Q01-langchain-models.md) 补齐：
 
 1. 确认本机 `.env` 完整，重启后端，检查 `/api/health` 显示模型已配置。这个检查不访问供应商，不代表密钥有效。
 2. 在 `backend/app/ai/models/gateway.py` 的 `model.invoke(messages)` 处打断点；通过页面发送简单问题，观察 `model`、`messages` 和 `result`，完成一次真实服务验收。
@@ -125,3 +133,12 @@ git log -3 --oneline
 Set-Location 'D:\learn\aiLearn\frontend'
 npm.cmd run dev -- --port 5173 --strictPort
 ```
+
+### Q02 实现与学习交接
+
+- 2026-11-05：用户阅读 Q01 后要求下一课，已实现 `app/ai/prompts/customer_service.py` 模板模块和 `POST /api/prompts/preview`，前端新增 `PromptPanel`，支持必填店铺名、简洁/详细风格、完整消息预览及模板版本。显式配置缺少店铺名或风格非法时返回 422；旧 Q01 请求省略 prompt 时仍使用后端默认配置。
+- 模板标识 `customer-service`、版本 `1.0.0` 由后端维护；模板改动需递增版本并回归固定案例。当前版本不逐条持久化到历史消息，不声称能完整重建过去的 Prompt。SDK 对照脚本也复用默认模板，保持两条调用路径的系统指令一致。
+- 验证结果：后端 50 个文件格式检查通过，pytest 26 项通过（真实 MySQL 集成、原有故障与隔离、模板变量和角色检查、两种真实适配器在内存 HTTP 传输中的预览/发送消息一致性）；前端 Prettier、TypeScript、Vite 构建通过，仍有已知大包体提示。
+- 浏览器使用独立的 8001/5174 临时服务验证登录、两种风格预览、花括号原样保留、空店铺名字段提示与按钮禁用，以及 375px 小屏布局；未修改用户 IDEA 进程，验收结束后停止临时服务。讲义和学习入口已同步到 README。
+- 本次未调用真实模型，不把预览或离线测试标为 DeepSeek 实际风格效果验收。用户需要在 IDEA 重新 Debug 后按 Q02 讲义实际观察和练习；Q01 真实服务验收状态仍保持待确认。
+- GitHub 拉取可用，但本机先前没有可用的推送凭据；提交与推送结果以本次收工报告和 `git status` 为准，若身份验证仍失败则保留本地提交，完成登录后再同步，不能强推。
