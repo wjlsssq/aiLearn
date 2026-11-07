@@ -372,6 +372,63 @@ h1 {
     padding: 25px;
   }
 }
+.chain-launch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0;
+  font-size: 13px;
+  color: var(--prompt-text-muted);
+}
+.chain-form {
+  display: grid;
+  gap: 10px;
+}
+.chain-form select {
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--prompt-border);
+  border-radius: 8px;
+  background: white;
+  font: inherit;
+}
+.chain-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.chain-actions .el-button {
+  margin-left: 0;
+  min-height: 44px;
+}
+.chain-result {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--prompt-border);
+  border-radius: 10px;
+}
+.chain-result details {
+  margin-top: 12px;
+}
+.chain-result summary {
+  cursor: pointer;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.chain-result pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--prompt-surface);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.chain-reply {
+  white-space: pre-wrap;
+  line-height: 1.7;
+}
 @media (max-width: 650px) {
   .prompt-fields {
     grid-template-columns: 1fr;

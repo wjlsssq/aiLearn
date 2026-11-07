@@ -1,6 +1,6 @@
 # ShopMind 双电脑交接
 
-最后更新：2026-11-05。后续每次完成修改都必须同步维护本文件，并与代码一起提交、推送。最新代码版本以 `git log -1` 为准，不在文档中填写本次提交的自身哈希。
+最后更新：2026-11-07。后续每次完成修改都必须同步维护本文件，并与代码一起提交、推送。最新代码版本以 `git log -1` 为准，不在文档中填写本次提交的自身哈希。
 
 ## 1. 每次开工先做
 
@@ -35,7 +35,8 @@ git log -3 --oneline
 - IDEA 调试入口 `backend/run.py`：单进程、关闭热重载，通过 `asyncio.Runner` 启动服务，绕开 IDEA 2025.1 的旧 pydevd 与 Uvicorn `loop_factory` 参数不兼容问题。
 - Q01：模型工厂与网关、DeepSeek 专用 LangChain 适配器、标准兼容适配器、SDK 对照脚本、模型状态展示、安全错误映射和测试。
 - Q02：版本化客服 ChatPromptTemplate、店铺名称与简洁/详细风格配置、受认证保护的消息预览；预览与真实聊天使用相同渲染函数，并返回服务端模板版本。
-- 按用户明确的交互要求提前实现流式基础：工作台发送即显示用户消息，通过 `/api/chat/stream` 和模型 `astream()` 逐块更新助手文本，可停止、原位重试、输入下一条草稿及切换会话取消。课程学习进度仍停留 Q02，未自动推进后续课程。
+- Q03：独立 Runnable / LCEL 实验，规范化 → Prompt → 模型 → 解析器；受认证保护的 `/api/chains/inspect` 和 `/api/chains/run`，支持单题 invoke、两题 batch、实际输出类型与失败阶段。预览不创建模型，实验不保存会话。
+- 按用户明确的交互要求提前实现流式基础：工作台发送即显示用户消息，通过 `/api/chat/stream` 和模型 `astream()` 逐块更新助手文本，可停止、原位重试、输入下一条草稿及切换会话取消。用户于 11 月 7 日要求下一阶段，课程现进入 Q03。
 - 用户已选择 DeepSeek。示例配置使用 `LLM_PROVIDER=deepseek`、`https://api.deepseek.com`、`deepseek-flash`；具体可用模型需以用户账号及供应商当前文档为准。
 
 ### 尚未验收
@@ -73,12 +74,12 @@ git log -3 --oneline
 
 ## 5. 代码入口与下一步
 
-当前课程按 [Q02 讲义](lessons/Q02-prompt-messages.md) 继续。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
+当前课程按 [Q03 讲义](lessons/Q03-runnable-lcel.md) 继续。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
 
-1. 在页面输入问题和店铺名称，切换简洁/详细风格，先用“预览消息”比较 system 与 user；预览不调用模型。
-2. 在 `app/ai/prompts/customer_service.py` 的 `format_messages(...)` 处观察变量和返回消息；页面发送在网关 `model.astream(messages)` 处观察增量，普通 `/api/chat` 或 SDK 对照脚本仍可观察 `invoke()`。链路说明见 [流式聊天](08-streaming-chat.md)。
-3. 按讲义完成必填变量、字面花括号、Few-shot 和模板版本练习；真实风格效果由用户实际发送后验收。
-4. 模板配置暂只存在当前页面与本次请求，历史聊天不恢复模板快照。Q02 代码完成不代表用户练习已完成；理解后再进入 Q03，不提前添加多轮历史和 RAG。
+1. 页面打开“流水线实验”，先预览带首尾空白的问题，展开 normalize / prompt 看实际字典、消息与类型；不调用模型。
+2. 切换 batch 预览两题，再按需运行。llm 模式运行两题发起两次真实模型请求，可能产生费用；实验面板整次返回步骤，普通聊天仍保持真实增量。
+3. 在 `app/ai/chains/customer_service.py` 的 `normalize_input`、`services/chain.py` 的 invoke / batch、`StepTrace.on_llm_end` 处断点观察。CLI `python -m scripts.compare_runnables --mock --method stream` 可离线比较流式迭代。
+4. 阅读 Q03 并完成 BOM 清理练习；确认理解固定链与 Agent、批量与多轮的区别后再进入 Q04。当前没有自动添加历史上下文或 RAG。
 
 Q01 的真实服务结果仍未由本次代理确认；如尚未完成，可按 [Q01 讲义](lessons/Q01-langchain-models.md) 补齐：
 
@@ -153,3 +154,13 @@ npm.cmd run dev -- --port 5173 --strictPort
 - 验证：后端 51 个文件格式检查及 pytest 37 项通过（真实 MySQL、权限、提交失败回滚、取消清理、两种真实适配器的内存 SSE 协议、上游 EOF 缺结束标记与中途连接重置）；前端格式检查、3 项 Node SSE 测试通过，覆盖 UTF-8 中文逐字节分包、CRLF/多行 data/合并帧与截断；TypeScript 和 Vite 构建通过，仅有已知包体提示。
 - 限制：取消不能撤销供应商已发生的推理或费用；提交成功但 done 丢失时，需重新打开会话核对再手动重试。本次未新增持久化幂等键，不自动重发模型请求，不声称任意网络故障下严格只执行一次。详细运行与断点说明见 `docs/08-streaming-chat.md`。
 - 下一步：用户在 IDEA 停止旧 Debug 并重新运行 `backend/run.py`，刷新 5173 工作台体验真实供应商增量；本次未用真实 DeepSeek 请求验收。临时验收服务和数据清理后退出，保留用户原 8000/5173 服务。
+
+### Q03 实现与学习交接
+
+- 2026-11-07：用户要求下一阶段，现进入 Q03 Runnable / LCEL。新增 `app/ai/chains/customer_service.py`，通过 `RunnableLambda | ChatPromptTemplate | model | StrOutputParser` 组成固定链；复用 Q02 模板与已有模型工厂，不改动普通聊天的 SSE、取消和保存行为。
+- `/api/chains/inspect` 只执行规范化与 Prompt，不创建模型；`/api/chains/run` 支持单题 invoke、两题 batch。输入上限每题 2000 字、最多两题；两题各一份回调追踪，限制并发 2，结果按输入顺序返回。失败逐题转换为安全提示，不回显供应商原始异常；空白模型正文显示解析失败。实验不创建会话或保存问答。
+- 前端增加独立 `useChainLab` 和 `ChainLab`，打开时快照店铺/风格与草稿；显示真实模式的请求次数与费用提示、原始输入、实际步骤类型、展开输出与失败位置。预览和完整执行均与普通聊天状态分离，编辑后清除旧结果，登出后拒收旧响应。
+- 当前锁定 LangChain 的 `StrOutputParser` 可能返回 `TextAccessor`（str 子类），面板如实展示；测试用 isinstance 判断字符串契约。模拟模型仍明确标识，未把离线验证描述为真实供应商验收。
+- 验证：后端 58 个文件 Ruff 格式通过，43 项 pytest 通过（真实 MySQL、原有流式与归属事务回归、Q03 实际中间类型/多块流/有序批量/独立失败/normalize 与 prompt 定位/空回答/认证与参数校验）；前端 Prettier、3 项 SSE 测试、TypeScript 与 Vite 构建通过，仍有已知 Element Plus 包体提示。CLI invoke / batch / stream 均使用 `--mock` 验证。
+- 浏览器在独立 8001/5174 离线服务验证了登录、规范化保留内部空格与 JSON 花括号、单题和双题执行、空白问题禁用、375px 小屏无横向溢出；截图在忽略的 `runtime/Q03-runnable-lab.png`。未改 `.env`，未请求付费模型，未操作用户 8000/5173 进程；临时服务验收后关闭。
+- 下一步：用户重新在 IDEA Debug `backend/run.py`，刷新 5173，按 `docs/lessons/Q03-runnable-lcel.md` 先预览，再打断点观察实际对象；按需由用户验收真实 invoke / batch。完成本课 BOM 清理练习、能解释固定链与 Agent 的区别后再进入 Q04 多轮上下文。本次不实现 Q04。

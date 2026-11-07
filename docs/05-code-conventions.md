@@ -50,6 +50,8 @@ backend/app/
   core/errors.py              # 业务异常类型
   ai/models/factory.py        # 供应商模型工厂和配置校验
   ai/models/gateway.py        # 单次模型调用、统一结果和外部错误边界
+  ai/prompts/customer_service.py # 版本化客服模板与变量
+  ai/chains/customer_service.py  # Q03 固定 LCEL 链与请求内步骤观察器
 ```
 
 依赖方向：API → Service → Repository → ORM / DB。API 负责 HTTP 参数与响应契约；Service 负责业务决定和提交；Repository 负责执行 SQL，不导入 FastAPI，不自行提交事务；ORM 实体不导入路由。

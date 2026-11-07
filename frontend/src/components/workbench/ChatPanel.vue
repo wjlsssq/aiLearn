@@ -77,7 +77,7 @@ watch(
       >
         <div class="spark">✦</div>
         <h2>你好，有什么可以帮你？</h2>
-        <p>Q02：切换回答风格，预览真正发送给模型的消息。</p>
+        <p>Q03：打开流水线实验，观察规范化、Prompt、模型和解析四步。</p>
         <el-button
           :disabled="busy"
           @click="input = '你能帮助我做哪些事情？'"

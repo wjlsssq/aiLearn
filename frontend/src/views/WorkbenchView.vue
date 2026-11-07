@@ -4,6 +4,8 @@ import LoginForm from '../components/workbench/LoginForm.vue' // 登录表单。
 import ChatPanel from '../components/workbench/ChatPanel.vue' // 对话展示与输入。
 import OrderPanel from '../components/workbench/OrderPanel.vue' // 模拟订单展示。
 import PromptPanel from '../components/workbench/PromptPanel.vue' // Q02：模板配置与消息预览。
+import ChainLab from '../components/workbench/ChainLab.vue'
+import { useChainLab } from '../composables/useChainLab'
 import { useWorkbench } from '../composables/useWorkbench' // 业务状态和操作统一入口。
 const {
   username,
@@ -37,6 +39,19 @@ const {
   retry,
   previewPrompt,
 } = useWorkbench() // 页面仅组合组件和绑定状态。
+const lab = useChainLab(token, logout)
+// 解构 ref 供模板自动解包，避免组件接收到 Ref 对象。
+const {
+  visible: chainVisible,
+  busy: chainBusy,
+  method,
+  first,
+  second,
+  prompt: chainPrompt,
+  report: chainReport,
+  error: chainError,
+  valid: chainValid,
+} = lab
 </script>
 <template>
   <!-- 按会话导航、主内容和订单信息组织工作台。 -->
@@ -104,6 +119,21 @@ const {
               :preview="promptPreview"
               :last-version="lastPromptVersion"
               @preview="previewPrompt"
+            />
+            <ChainLab
+              v-model:visible="chainVisible"
+              v-model:method="method"
+              v-model:first="first"
+              v-model:second="second"
+              :busy="chainBusy"
+              :valid="chainValid"
+              :enabled="promptValid && !busy"
+              :mode="chatMode"
+              :prompt="chainPrompt"
+              :report="chainReport"
+              :error="chainError"
+              @open="lab.open({ store_name: storeName, style: promptStyle }, input)"
+              @run="lab.run"
             />
           </template>
         </ChatPanel>
