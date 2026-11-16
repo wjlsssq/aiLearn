@@ -1,539 +1,242 @@
-/* 基础色彩与尺寸统一定义，保证工作台视觉一致。 */
-.tool-json {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  max-height: 320px;
-  overflow: auto;
-  padding: 12px;
-  background: #f7faf8;
-}
-.tool-report ol {
-  padding-left: 24px;
-}
-.tool-report li {
-  margin: 20px 0;
-  overflow-wrap: anywhere;
-}
-.tool-order {
-  border: 1px solid #d4dfd8;
-  border-radius: 8px;
-  padding: 12px;
-}
-.knowledge-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin: 16px 0;
-}
-.knowledge-grid fieldset {
-  min-width: 0;
-  border: 1px solid #d4dfd8;
-  border-radius: 8px;
-}
-.knowledge-grid label {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  margin: 8px 0;
-}
-.knowledge-preview {
-  min-width: 0;
-  padding: 14px;
-  border: 1px solid #d4dfd8;
-  border-radius: 8px;
-}
-.knowledge-preview pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  max-height: 360px;
-  overflow-y: auto;
-  background: #f7faf8;
-  padding: 10px;
-}
-.knowledge-preview mark {
-  background: #ffe6a3;
-  color: #203a36;
-}
-.knowledge-hash {
-  overflow-wrap: anywhere;
-  font-size: 12px;
-}
-.knowledge-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 14px 0;
-}
-.knowledge-actions .el-button + .el-button {
-  margin-left: 0;
-}
-.knowledge-upload {
-  display: block;
-  margin: 12px 0;
-}
-@media (max-width: 700px) {
-  .knowledge-grid {
+/* 工作台样式入口：按职责组织样式，响应式规则最后应用。 */
+@import './theme.css';
+@import './app-shell.css';
+@import './conversations.css';
+@import './resources.css';
+@import './login.css';
+
+@media (max-width: 1260px) {
+  .app-nav {
+    width: 184px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .session-sidebar {
+    width: 205px;
+  }
+  .context-panel {
+    width: 245px;
+  }
+  .context-section {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  .messages {
+    padding: 22px;
+  }
+  .suggestion-grid {
     grid-template-columns: 1fr;
   }
-}
-:root {
-  font-family: Inter, 'Microsoft YaHei', sans-serif;
-  color: #203a36;
-  background: #f3f6f4;
-  --el-color-primary: #267966;
-  --prompt-text-muted: #526f63;
-  --prompt-border: #d4dfd8;
-  --prompt-surface: #f7faf8;
-  --prompt-error: #b42318;
-}
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-}
-button {
-  font: inherit;
-}
-h1,
-h2,
-h3,
-p {
-  margin-top: 0;
-}
-.workspace {
-  display: flex;
-  min-height: 100vh;
-}
-.sidebar {
-  width: 245px;
-  background: #173d35;
-  color: #fff;
-  padding: 30px 22px;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-}
-.brand {
-  font-size: 22px;
-  font-weight: 700;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-.brand > span {
-  font-size: 23px;
-}
-.sidebar .muted {
-  color: #abc7bd;
-  font-size: 12px;
-  margin-top: 14px;
-}
-.stage {
-  font-size: 12px;
-  border: 1px solid #51776b;
-  padding: 12px;
-  border-radius: 8px;
-  margin: 22px 0;
-}
-.section-label {
-  font-size: 12px;
-  color: #abc7bd;
-  margin: 30px 0 10px;
-}
-.session {
-  border: 0;
-  background: transparent;
-  color: #cde2d9;
-  text-align: left;
-  padding: 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.session.active,
-.session:hover {
-  background: #30584c;
-}
-.sidebar-bottom {
-  margin-top: auto;
-  padding-top: 50px;
-  font-size: 12px;
-  line-height: 2;
-  color: #abc7bd;
-}
-main {
-  flex: 1;
-  min-width: 0;
-  padding: 34px 40px;
-}
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
-}
-h1 {
-  font-size: 27px;
-  margin-bottom: 0;
-}
-.eyebrow {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: #66847a;
-}
-.status {
-  font-size: 12px;
-  color: #477b66;
-}
-.muted {
-  font-size: 13px;
-  color: #7b8e86;
-  line-height: 1.8;
-}
-.content {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 270px;
-  gap: 24px;
-}
-.chat-panel,
-.details,
-.login-card {
-  background: #fff;
-  border: 1px solid #e2eae4;
-  border-radius: 16px;
-}
-.chat-panel {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 150px);
-  min-height: 450px;
-}
-/* 生成状态只出现在当前问答，不用全页禁用来代替反馈。 */
-.reply-pending {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--prompt-text-muted);
-}
-.waiting-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--el-color-primary);
-}
-.stream-cursor {
-  color: var(--el-color-primary);
-}
-.message-feedback {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  color: var(--prompt-error);
-  font-size: 13px;
-  line-height: 1.6;
-}
-.message-state {
-  color: var(--prompt-text-muted);
-  font-size: 12px;
-}
-.generation-hint {
-  margin: 0;
-  padding: 8px 20px 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--prompt-text-muted);
-}
-.scroll-latest {
-  position: absolute;
-  right: 24px;
-  bottom: 110px;
-  z-index: 1;
-}
-.panel-top {
-  padding: 20px;
-  border-bottom: 1px solid #edf1ed;
-  font-weight: 600;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
-}
-.messages {
-  flex: 1;
-  min-height: 120px;
-  overflow: auto;
-  padding: 24px;
-}
-/* Q02 配置使用既有工作台色彩，表单标签与预览文本保持清晰。 */
-.prompt-settings {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--prompt-border);
-  background: var(--prompt-surface);
-  flex-shrink: 0;
-}
-.prompt-settings summary {
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 6px 0;
-}
-.prompt-settings summary:focus-visible,
-.prompt-field select:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 3px;
-}
-.prompt-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.8fr) auto;
-  gap: 12px;
-  align-items: start;
-  margin-top: 12px;
-}
-.prompt-field {
-  min-width: 0;
-}
-.prompt-field label {
-  display: block;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-.prompt-field select {
-  width: 100%;
-  height: 32px;
-  padding: 0 8px;
-  color: inherit;
-  font: inherit;
-  font-size: 13px;
-  background: #fff;
-  border: 1px solid var(--prompt-border);
-  border-radius: 4px;
-}
-.prompt-fields > .el-button {
-  margin-top: 27px;
-}
-.prompt-hint,
-.field-error,
-.prompt-dialog-caption {
-  margin: 8px 0 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--prompt-text-muted);
-}
-.field-error {
-  color: var(--prompt-error);
-}
-.prompt-message-list {
-  max-height: 55vh;
-  overflow: auto;
-}
-.prompt-message {
-  margin-top: 16px;
-}
-.prompt-message h3 {
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-.prompt-message pre {
-  margin: 0;
-  padding: 16px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.8;
-  color: #203a36;
-  background: var(--prompt-surface);
-  border: 1px solid var(--prompt-border);
-  border-radius: 8px;
-}
-.welcome {
-  text-align: center;
-  margin: 70px auto;
-  color: #526f63;
-}
-.welcome h2 {
-  font-size: 23px;
-}
-.welcome > p {
-  font-size: 13px;
-  margin-top: 20px;
-}
-.spark {
-  font-size: 44px;
-  color: #38927a;
-  margin-bottom: 20px;
-}
-.composer {
-  display: flex;
-  gap: 12px;
-  padding: 20px;
-  border-top: 1px solid #edf1ed;
-}
-.message {
-  max-width: 90%;
-  margin-bottom: 22px;
-}
-.message.user {
-  margin-left: auto;
-  text-align: right;
-}
-.role {
-  font-size: 11px;
-  color: #81948a;
-}
-.message p {
-  padding: 14px 18px;
-  border-radius: 12px;
-  background: #f1f5f2;
-  font-size: 14px;
-  line-height: 1.9;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  margin-top: 8px;
-}
-.message.user p {
-  background: #e0f1e9;
-  text-align: left;
-}
-.details {
-  align-self: start;
-  padding-bottom: 20px;
-}
-.details > .muted,
-.details > .el-button {
-  margin: 20px;
-}
-.order {
-  padding: 20px;
-  border-bottom: 1px solid #edf1ed;
-}
-.order small {
-  color: #87988e;
-}
-.order h3 {
-  font-size: 15px;
-  margin: 12px 0;
-}
-.order p {
-  font-size: 12px;
-  color: #348365;
-  margin: 0;
-}
-.login-card {
-  max-width: 480px;
-  margin: 60px auto;
-  padding: 36px;
-}
-.login-card h2 {
-  margin: 20px 0;
-}
-.login-card .el-form {
-  margin-top: 30px;
 }
 @media (max-width: 1050px) {
-  .content {
-    grid-template-columns: 1fr;
-  }
-  .details {
-    display: block;
-  }
-  .sidebar {
-    width: 210px;
-  }
-  main {
-    padding: 25px;
-  }
-}
-.chain-launch {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 0;
-  font-size: 13px;
-  color: var(--prompt-text-muted);
-}
-.chain-form {
-  display: grid;
-  gap: 10px;
-}
-.chain-form select {
-  min-height: 44px;
-  padding: 8px;
-  border: 1px solid var(--prompt-border);
-  border-radius: 8px;
-  background: white;
-  font: inherit;
-}
-.chain-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.chain-actions .el-button {
-  margin-left: 0;
-  min-height: 44px;
-}
-.chain-result {
-  margin-top: 16px;
-  padding: 16px;
-  border: 1px solid var(--prompt-border);
-  border-radius: 10px;
-}
-.chain-result details {
-  margin-top: 12px;
-}
-.chain-result summary {
-  cursor: pointer;
-  line-height: 1.8;
-  overflow-wrap: anywhere;
-}
-.chain-result pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  background: var(--prompt-surface);
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 13px;
-}
-.chain-reply {
-  white-space: pre-wrap;
-  line-height: 1.7;
-}
-@media (max-width: 650px) {
-  .prompt-fields {
-    grid-template-columns: 1fr;
-  }
-  .prompt-fields > .el-button {
-    margin-top: 0;
-    justify-self: start;
-  }
-  .prompt-field select,
-  .prompt-field .el-input__wrapper,
-  .prompt-fields > .el-button {
-    min-height: 44px;
-  }
-  .sidebar {
+  .context-panel {
     display: none;
   }
-  main {
-    padding: 18px;
+  .app-nav {
+    width: 185px;
   }
-  .status {
-    max-width: 130px;
+  .welcome {
+    margin-top: 6vh;
   }
-  .chat-panel {
-    height: calc(100vh - 130px);
+  .suggestion-grid {
+    grid-template-columns: 1fr 1fr;
   }
-  .login-card {
-    padding: 24px;
-    margin: 20px auto;
+}
+@media (max-width: 760px) {
+  .app-nav {
+    display: none;
+  }
+  .app-nav.is-open {
+    display: flex;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    width: 225px;
+  }
+  .nav-mask {
+    display: block;
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: #1f2d4d55;
+    z-index: 19;
+  }
+  .mobile-menu {
+    display: inline-flex;
+  }
+  .app-header {
+    padding: 0 14px;
+    height: 55px;
+  }
+  .header-title > span,
+  .header-title > svg {
+    display: none;
+  }
+  .header-title {
+    gap: 8px;
+  }
+  .session-sidebar {
+    width: 190px;
+  }
+  .context-panel {
+    display: none;
+  }
+  .page-content {
+    padding: 23px 16px;
+  }
+  .page-heading {
+    align-items: flex-start;
+  }
+  .page-heading p:not(.eyebrow) {
+    font-size: 11px;
+  }
+  .data-toolbar {
+    flex-wrap: wrap;
+  }
+  .data-toolbar .session-search {
+    width: 100%;
+  }
+  .login-story {
+    display: none;
+  }
+  .login-form-area {
+    padding: 30px;
+  }
+  .login-mini-brand {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: #4e71cc;
+    margin-bottom: 40px;
+    font-weight: 600;
+  }
+}
+@media (max-width: 560px) {
+  .conversation-workspace {
+    flex-direction: column;
+  }
+  .session-sidebar {
+    width: 100%;
+    height: 95px;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 9px 12px;
+  }
+  .session-heading {
+    margin-bottom: 7px;
+  }
+  .session-sidebar .session-search,
+  .session-sidebar .section-caption,
+  .session-sidebar .new-session-button {
+    display: none;
+  }
+  .session-list {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    min-height: 29px;
+    gap: 6px;
+  }
+  .session-item {
+    flex-shrink: 0;
+    max-width: 145px;
+    width: auto;
+    padding: 4px 8px;
+    margin: 0;
+    border-radius: 5px;
+  }
+  .session-avatar,
+  .session-copy small,
+  .selected-dot {
+    display: none;
+  }
+  .session-copy strong {
+    font-size: 10px;
+  }
+  .chat-header {
+    height: 61px;
+    padding: 12px 16px;
+  }
+  .chat-title h2 {
+    max-width: 230px;
+  }
+  .messages {
+    padding: 18px 15px;
+  }
+  .welcome {
+    margin: 25px auto;
+  }
+  .welcome h2 {
+    font-size: 20px;
+  }
+  .suggestion-grid {
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .suggestion-grid button {
+    padding: 13px 11px;
+  }
+  .suggestion-grid span {
+    line-height: 1.7;
+  }
+  .composer-area {
+    padding: 0 13px 10px;
+  }
+  .composer-tools > span {
+    display: none;
+  }
+  .composer-bottom > span {
+    font-size: 8px;
+  }
+  .connection-status {
+    font-size: 9px;
+  }
+  .page-heading {
+    flex-wrap: wrap;
+  }
+  .el-drawer__body {
+    padding: 20px;
+  }
+  .data-card {
+    padding: 0 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .waiting-dot {
+    animation: none;
+  }
+}
+
+/* 移动端订单卡片保证状态与操作无需横向滑动即可访问。 */
+.mobile-orders {
+  display: none;
+}
+@media (max-width: 560px) {
+  .desktop-orders {
+    display: none;
+  }
+  .mobile-orders {
+    display: block;
+  }
+  .mobile-order {
+    padding: 20px 0;
+    border-top: 1px solid var(--border);
+  }
+  .mobile-order > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .mobile-order strong {
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .mobile-order p {
+    color: #7e8aa0;
+    font-size: 11px;
+    margin: 13px 0;
   }
 }

@@ -1,12 +1,10 @@
-"""Q12：显式两次模型调用，方便在进入自动 Agent 前观察协议。"""
+"""有界工具调用：一次决策、一次结果归纳，执行权限由业务服务控制。"""
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from openai import LengthFinishReasonError, ContentFilterFinishReasonError
 from pydantic import ValidationError
 from langchain_core.exceptions import OutputParserException
-from ...core.config import settings
 from ...core.errors import BusinessError
-from ..tools.order import TOOL_NAME
 from .factory import create_chat_model
 from .gateway import safe_model_call
 
@@ -30,19 +28,6 @@ def invoke_model(runnable, messages) -> AIMessage:
 
 def propose_call(question: str, tool):
     messages = [SystemMessage(content=SYSTEM), HumanMessage(content=question)]
-    if settings.chat_mode == "mock":
-        # 固定样例只用于观察协议，不声称理解任意输入；订单结果仍查真实教学 MySQL。
-        decision = AIMessage(
-            content="",
-            tool_calls=[
-                {
-                    "id": "demo-order-call",
-                    "name": TOOL_NAME,
-                    "args": {"order_no": "DEMO-A001"},
-                }
-            ],
-        )
-        return None, messages, decision
     model = create_chat_model()
     decision = invoke_model(
         model.bind_tools([tool]), messages
@@ -51,9 +36,5 @@ def propose_call(question: str, tool):
 
 
 def finish_answer(model, messages, decision, tool_message: ToolMessage) -> AIMessage:
-    if model is None:
-        return AIMessage(
-            content="【模拟答复】固定演示流程已返回，请核对下方真实教学订单查询卡片。本模式不理解任意问题。"
-        )
     return invoke_model(model, [*messages, decision, tool_message])
     # assistant.tool_calls 与 tool.tool_call_id 对应，第二次调用才能看见工具结果。

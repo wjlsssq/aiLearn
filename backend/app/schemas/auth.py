@@ -11,3 +11,7 @@ class LoginInput(BaseModel):  # 登录 DTO。
 class LoginResponse(BaseModel):  # 令牌仅在登录成功时返回。
     token: str  # 当前登录凭据。
     username: str  # 登录用户名称。
+
+
+class CurrentUserResponse(BaseModel):
+    username: str  # 页面恢复身份时不返回密码摘要、令牌或其他内部字段。

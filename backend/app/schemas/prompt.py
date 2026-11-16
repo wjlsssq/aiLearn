@@ -20,20 +20,3 @@ class PromptOptions(BaseModel):
         if "\n" in value or "\r" in value:  # 避免把多行文本误当业务名称。
             raise ValueError("店铺名称不能换行")  # FastAPI 将其映射为字段校验失败。
         return value  # 返回通过校验的字段值。
-
-
-class PromptPreviewInput(PromptOptions):
-    message: str = Field(
-        min_length=1, max_length=2000
-    )  # 与聊天保持相同的问题长度上限。
-
-
-class PromptMessage(BaseModel):
-    role: Literal["system", "user"]  # 本课只渲染两种角色，不伪造工具结果。
-    content: str  # 完整渲染内容，以纯文本展示。
-
-
-class PromptPreviewResponse(BaseModel):
-    template_id: str  # 由后端决定的模板标识。
-    version: str  # 对照实验使用的模板版本。
-    messages: list[PromptMessage]  # 与真实调用共享渲染逻辑的消息列表。

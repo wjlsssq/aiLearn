@@ -148,8 +148,4 @@ def test_http_auth_input_validation_and_mock(monkeypatch):
                 == 422
             )
         response = client.post("/api/drafts/extract", json={"description": DESCRIPTION})
-        assert response.status_code == 200
-        assert (
-            response.json()["mode"] == "mock"
-            and response.json()["draft"]["order_no"] is None
-        )
+        assert response.status_code == 503

@@ -34,3 +34,8 @@ def resolve_user(db: Session, token: str) -> User:  # 恢复持久化登录身�
     if user is None:  # 已删除用户不能继续登录。
         raise BusinessError(401, "用户不存在")  # 明确拒绝认证。
     return user  # 归属检查基于此身份。
+
+
+def sign_out(db: Session, token: str) -> None:
+    repository.remove_token(db, token_digest(token))
+    db.commit()  # 仅撤销当前登录，不影响同账号其他设备。

@@ -36,6 +36,7 @@ async function fetchResponse(path: string, body?: object, signal?: AbortSignal) 
 
 export async function request<T>(path: string, body?: object): Promise<T> {
   const response = await fetchResponse(path, body)
+  if (response.status === 204) return undefined as T // 无正文成功响应不执行 JSON 解析。
   return (await response.json()) as T // JSON 请求保持原有行为。
 }
 

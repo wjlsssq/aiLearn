@@ -1,10 +1,10 @@
 # ShopMind 双电脑交接
 
-最后更新：2026-11-16。后续每次完成修改都必须同步维护本文件，并与代码一起提交、推送。最新代码版本以 `git log -1` 为准，不在文档中填写本次提交的自身哈希。
+最后更新：2026-11-16。当前目标：可用的企业 Agent 产品；当前实现以本文件前半部分为准，末尾记录为历史，不代表旧实验入口仍存在。每次修改后与代码一同提交、推送，最新版本以 `git log -1` 为准。
 
 ## 1. 每次开工先做
 
-在仓库根目录执行；先确认所在分支是 `main`，并检查是否存在上次未提交的工作。
+在仓库根目录执行，先确认 main 分支和未提交工作：
 
 ```powershell
 git status --short --branch
@@ -14,102 +14,76 @@ Get-Content -Encoding UTF8 docs/07-handoff.md
 git log -3 --oneline
 ```
 
-拉取成功后再修改。若工作区改动阻止拉取或分支已分叉，保留现场并核对差异，不能用 reset、强推或丢弃文件来解决。不要在两台电脑同时修改同一批工作：上一台完成提交并成功推送后，下一台再拉取。
+拉取成功后再修改；工作区阻止拉取或分支分叉时保留现场并核对差异，不能 reset、强推或丢弃用户文件。上一台提交并推送成功后，下一台再拉取。
 
-当前电脑使用的 GitHub 仓库为 `https://github.com/wjlsssq/aiLearn.git`。本机网络需要时可用 `git -c http.proxy=http://127.0.0.1:7892 pull --ff-only`；这是本机代理地址，另一台电脑仅在确实有该代理时使用，不写入共享配置。
+远端为 `https://github.com/wjlsssq/aiLearn.git`。本机当前代理端口是 7897，必要时使用 `git -c http.proxy=http://127.0.0.1:7897 pull --ff-only`；其他电脑先核对自己的代理，不写入共享配置，不套用历史端口。
 
-## 2. 用户目标与学习方式
+## 2. 用户方向与长期约定
 
-- 用户有 Java / 后端经验，Python 较少，已阅读 Q01 调用链与 SDK 对照讲解，主动要求进入 Q02。
-- 通过智能电商售后客服 ShopMind 学习 LangChain，以 20 道面试题对应逐步实现的功能模块。
-- 交流、讲义和手写注释用中文。教学核心代码逐行解释用途、数据流与设计原因，用 Java 概念帮助理解。
-- 每课先看功能与调用链，再断点、对照实验与面试表达。不要一次推进后续所有模块。
-- MySQL 是唯一业务数据库。前后端分层、Prettier 和 E 盘依赖约定见根目录 AGENTS.md。
+- 用户有 Java / 后端经验，Python 较少。中文注释与独立讲义保留，通过断点理解实现。
+- 2026-11-16 明确要求企业产品页面：只显示真实业务操作与结果，不再放课程编号、技术协议、Prompt、实验面板、演示指标、固定模拟业务输出。后续功能直接按业务流程建设。
+- Agent 路线继续 Q12 工具 → Q13 create_agent → Q14 图流程 → Q15 恢复 → Q16 确认与幂等；跳过文档检索学习，不要求配置 Embedding，不把跳过内容记成已学会。
+- MySQL 为业务数据库；分层、Prettier、E 盘依赖与敏感文件约定见 AGENTS.md。
+- 原有用户改动 `docs/lessons/Q02-prompt-messages.md` 和未跟踪 `docs/面试.md` 保留，不混入功能提交；不要清理、覆盖或自动暂存它们。
 
-## 3. 当前实现与边界
+## 3. 当前产品实现
 
-### 已完成
-
-- 阶段 0：Vue 3 / TypeScript / Element Plus 工作台，FastAPI、SQLAlchemy、MySQL，登录、订单归属隔离、会话与消息持久化、模拟聊天。
-- 前端按页面、组件、composable、API、类型、工具和样式拆分，接入 Prettier；后端按 API → Service → Repository → ORM/DB 分层。
-- IDEA 调试入口 `backend/run.py`：单进程、关闭热重载，通过 `asyncio.Runner` 启动服务，绕开 IDEA 2025.1 的旧 pydevd 与 Uvicorn `loop_factory` 参数不兼容问题。
-- Q01：模型工厂与网关、DeepSeek 专用 LangChain 适配器、标准兼容适配器、SDK 对照脚本、模型状态展示、安全错误映射和测试。
-- Q02：版本化客服 ChatPromptTemplate、店铺名称与简洁/详细风格配置、受认证保护的消息预览；预览与真实聊天使用相同渲染函数，并返回服务端模板版本。
-- Q03：独立 Runnable / LCEL 实验，规范化 → Prompt → 模型 → 解析器；受认证保护的 `/api/chains/inspect` 和 `/api/chains/run`，支持单题 invoke、两题 batch、实际输出类型与失败阶段。预览不创建模型，实验不保存会话。
-- 按用户明确的交互要求提前实现流式基础：工作台发送即显示用户消息，通过 `/api/chat/stream` 和模型 `astream()` 逐块更新助手文本，可停止、原位重试、输入下一条草稿及切换会话取消。用户于 11 月 7 日要求下一阶段，课程现进入 Q03。
-- 用户已选择 DeepSeek。示例配置使用 `LLM_PROVIDER=deepseek`、`https://api.deepseek.com`、`deepseek-flash`；具体可用模型需以用户账号及供应商当前文档为准。
-
-### 尚未验收
-
-- 尚未完成本次交接的真实 DeepSeek 调用验收；当前本机已存在密钥配置，但有效性未验证。切换电脑后必须在自己的 `.env` 配置，不在聊天、文档或 Git 中传递密钥。
-- Q01 自动化测试使用内存 HTTP 响应验证真实适配器，没有发起付费模型调用；不能将其描述为真实服务验收通过。
-- Q04 普通聊天现在会携带授权会话的最近完整问答；Q02 预览和 Q03 实验仍不读取历史。真实供应商记忆效果待用户验收。
-- 尚未接入 RAG、订单工具、Agent 和售后操作。前端订单展示并不代表模型可查询订单。
+- Vue 3 / TypeScript / Element Plus 前端重构为浅灰白底、蓝色强调的服务工作空间。参考 Intercom Inbox、Zendesk Agent Workspace 与 Carbon 模式，具体来源和设计取舍见 [产品设计](09-product-workspace.md)。
+- 会话工作台：业务导航、可搜索的当前账号会话、增量回复、停止/重试、下一条草稿、历史恢复、订单上下文。手机有折叠导航、横向会话切换与订单卡片。
+- 订单中心：当前账号订单列表和搜索；订单助手抽屉自然语言查询，展示答复和确定性订单卡片。最多一次工具、两次模型调用；尚未接入 create_agent，普通聊天也尚未自动调度订单工具。
+- 售后资料：结构化提取订单号、问题类型、原因与数量，提示缺失字段并复制。没有退款、审批或创建工单操作。
+- 规则文档：UTF-8 文本保存、同名版本更新、正文与历史版本查阅。已有分块保留为内部入库实现；没有接入 Embedding、检索或自动引用回答，不把资料入库描述成 RAG 已完成。
+- 登录不预填或展示开发账号；GET `/api/me` 恢复当前身份。POST `/api/logout` 返回 204，仅撤销当前令牌，不影响其他设备；前端支持无正文响应。
+- 订单助手 POST `/api/assistant/orders` 只返回 status、answer、order、message。Service 捕获认证 user_id；工具白名单、严格参数、归属 SQL、短数据库事务和执行预算仍有效。已删除实验报告、步骤计数与模拟物流文案，不为教学结果保留额外服务包装。
+- 保留原聊天的事务、取消、历史上下文、SSE 故障保护与供应商适配。客服模板版本 1.2.0，默认店铺名 ShopMind。智能功能要求 llm 配置；mock 仅用于后端回归，页面不提供模拟入口，订单/资料接口在未启用时返回 503。
+- Prompt 预览、LCEL 实验、工具协议面板、切分 A/B、流式计时演示及其专属前端状态/类型/接口已删除；后端教学预览、链执行器、对照脚本和示例文档端点退出运行代码。旧讲义对应的实验代码可在 Git 历史 `b3bc15a` 查看。
+- 退役接口：`/api/prompts/preview`、`/api/chains/*`、`/api/tool-calling/*`、`/api/knowledge/example`、`/api/knowledge/preview`。当前分层入口见 [架构](05-code-conventions.md)；不要按历史交接恢复实验面板。
+- 本次没有新增依赖、环境字段、表结构或迁移；知识表仍为 `0001_knowledge`。现有用户数据及其示例标识原样保留。
 
 ## 4. 另一台电脑恢复环境
 
-源码可以放在方便的位置；下面的项目相对路径均在仓库根目录执行。不要复制现有虚拟环境、node_modules 或 IDE 本机配置。
+源码可放在方便的位置，不复制虚拟环境、node_modules 或 IDE 配置。
 
-1. 安装 Git、uv、Node.js（当前验证版本 22.18.0）和 MySQL 8；克隆仓库并阅读 AGENTS.md、本文件。
-2. 按 [Python 环境重建](00-environment.md#5-新电脑或重新准备环境) 创建 E 盘运行目录、Python 3.12.13、虚拟环境与目录联接，然后 `uv sync --locked`。不要把已有普通目录覆盖为联接。没有 E 盘时先与用户确认替代盘符，再统一调整脚本和文档。
-3. 根目录执行 `powershell -ExecutionPolicy Bypass -File scripts/install_frontend.ps1`，从锁文件将前端依赖安装到 E 盘并创建入口。
-4. 仅在没有本机 `.env` 时复制 `.env.example` 为 `.env`，填写本机 MySQL 密码和自己的 `LLM_API_KEY`。原电脑数据库账号由用户提供，另一台应按自己的 MySQL 实际设置填写。
-5. 执行 `uv run --locked python -m scripts.init_db`，再执行 `uv run --locked alembic -c backend/alembic.ini upgrade head`，初始化独立教学库 `langchain_lab` 和合成数据。Git 不同步 MySQL 数据或原电脑会话；另一台会有自己的数据。
-6. IDEA 项目解释器选择 `E:\ailearn-runtime\shopmind\venv\Scripts\python.exe`，建议打开仓库根目录；右键 `backend/run.py` → Debug。不要直接运行 routes 或 services 中的文件。
-7. 另开终端进入 `frontend`，执行 `npm.cmd run dev -- --port 5173 --strictPort`，浏览器访问 `http://127.0.0.1:5173`。
+1. 安装 Git、uv、Node.js 与 MySQL 8，克隆后阅读本文件和 AGENTS.md。
+2. 按 [环境恢复](00-environment.md#5-新电脑或重新准备环境) 创建 E 盘运行目录、Python 3.12.13 和目录联接，根目录执行 `uv sync --locked`。没有 E 盘时先确认替代盘符，不覆盖普通目录。
+3. 根目录执行 `powershell -ExecutionPolicy Bypass -File scripts/install_frontend.ps1`，从锁文件安装依赖到 E 盘。
+4. 仅本机没有 `.env` 时复制 `.env.example`，填写自己的 MySQL 与模型配置；密钥不通过聊天、文档或 Git 传递。
+5. 新库先执行 `uv run --locked python -m scripts.init_db`，再执行 `uv run --locked alembic -c backend/alembic.ini upgrade head`。已有库可幂等执行，不清空数据；Git 不同步 MySQL 内容。
+6. IDEA 解释器选择 `E:\ailearn-runtime\shopmind\venv\Scripts\python.exe`。打开仓库根目录，右键 `backend/run.py` → Debug。入口通过 asyncio.Runner 绕开旧 IDEA pydevd 的 loop_factory 参数冲突；单进程，无热重载。不要直接运行 routes/services。
+7. 另开终端进入 frontend，运行 `npm.cmd run dev -- --port 5173 --strictPort`，访问 `http://127.0.0.1:5173`。
 
-当前原电脑环境：
+当前电脑源码 `C:\Users\27959\Desktop\ailearn`，Python 3.12.13 / Node 22.18.0 / MySQL 8.0.35。依赖真实目录在 `E:\ailearn-runtime\shopmind`，项目 `.tools`、`.venv`、`.cache`、`frontend/node_modules` 为目录联接。另一台源码曾位于 `D:\learn\aiLearn`，应以其当前工作目录为准。
 
-| 内容 | 路径 / 版本 |
-| --- | --- |
-| 源码 | `C:\Users\27959\Desktop\ailearn` |
-| Python | 3.12.13，实际在 `E:\ailearn-runtime\shopmind\tools\python` |
-| 虚拟环境 | `E:\ailearn-runtime\shopmind\venv` |
-| 前端依赖工作目录 | `E:\ailearn-runtime\shopmind\frontend-deps` |
-| uv / npm 缓存 | `E:\ailearn-runtime\shopmind\cache` 下对应目录 |
-| 项目联接 | `.tools`、`.venv`、`.cache`、`frontend/node_modules` |
-| MySQL | 8.0.35，`127.0.0.1:3306`，库 `langchain_lab` |
+开发种子账号 alice / bob、密码 Learn123! 仅用于本地合成数据库，不是生产开户方式。生产角色、账号管理和部署尚需建设。
 
-教学登录账号 `alice` / `bob`，密码均为 `Learn123!`，只用于本地合成数据。后端默认 8000，前端默认 5173。不要启动多个后端争用同一端口；修改 `.env` 或后端代码后停止旧 Debug，再重新启动。
+## 5. 本次验证与未完成事项
 
-## 5. 代码入口与下一步
+2026-11-16 企业工作台改造：
 
-当前按用户要求跳过文档检索，进入 [Q12 订单工具协议](lessons/Q12-tool-calling.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
+- 后端 73 个 Python 文件格式通过，pytest 90 项通过，包含真实 MySQL、令牌撤销、跨用户归属、工具预算/非法参数、两种适配器内存协议、流式/上下文/取消/事务及文档版本回归。模型请求使用替身或内存响应，不消耗真实供应商额度。
+- 前端 Prettier、3 项 SSE 测试、vue-tsc 与 Vite 生产构建通过。仅注册实际使用的 Element Plus 组件，中文 locale 已接入。JS 416.49 KB / gzip 147.96 KB，相比全量注册时约 1067 / 349 KB 缩小，无原 JS 大包提示；CSS 380.19 KB / gzip 52.62 KB。
+- 浏览器在独立 8001/5174 临时服务验证空白登录、身份恢复、订单查询、规则文档保存/版本、部分流式输出、下一条草稿、刷新后历史恢复及退出；375×812 手机导航和订单卡片无横向溢出，控制台无警告/错误。验收模型为隔离响应，没有调用付费模型。
+- 本次唯一命名验收文档/会话已按当前测试用户精确清理，临时服务和浏览器页已关闭；未操作用户 IDEA 和原 8000/5173 服务。预览截图在忽略的 runtime/product-workspace.png 与 runtime/product-mobile-orders.png，不随 Git 同步。
+- 未确认真实 DeepSeek 密钥与工具选取效果；配置齐全只说明字段存在，不能声称供应商实际验收通过。生产反向代理、TLS、组织角色、审计、流程恢复与写操作幂等也未完成。
+- 取消不能撤销供应商已发生的推理或费用；提交成功但 done 丢失需重新打开会话核对，不承诺严格 exactly-once。
 
-1. 页面打开“流水线实验”，先预览带首尾空白的问题，展开 normalize / prompt 看实际字典、消息与类型；不调用模型。
-2. 切换 batch 预览两题，再按需运行。llm 模式运行两题发起两次真实模型请求，可能产生费用；实验面板整次返回步骤，普通聊天仍保持真实增量。
-3. 在 `app/ai/chains/customer_service.py` 的 `normalize_input`、`services/chain.py` 的 invoke / batch、`StepTrace.on_llm_end` 处断点观察。CLI `python -m scripts.compare_runnables --mock --method stream` 可离线比较流式迭代。
-4. 阅读 Q03 并完成 BOM 清理练习；确认理解固定链与 Agent、批量与多轮的区别后再进入 Q04。当前没有自动添加历史上下文或 RAG。
+## 6. 下一步
 
-Q01 的真实服务结果仍未由本次代理确认；如尚未完成，可按 [Q01 讲义](lessons/Q01-langchain-models.md) 补齐：
+用户停止旧 IDEA Debug 后重新运行 backend/run.py，刷新前端即可看到新页面。按实际账号在本机配置 llm 后自行体验真实回复、订单查询和售后提取；本次不擅自消耗付费额度。
 
-1. 确认本机 `.env` 完整，重启后端，检查 `/api/health` 显示模型已配置。这个检查不访问供应商，不代表密钥有效。
-2. 在 `backend/app/ai/models/gateway.py` 的 `model.invoke(messages)` 处打断点；通过页面发送简单问题，观察 `model`、`messages` 和 `result`，完成一次真实服务验收。
-3. 跟踪前端 `useWorkbench.ts` → `api/chat.ts` → 后端 `api/routes/chat.py` → `services/chat.py` → AI 网关 → Repository 入库。
-4. 使用 `scripts/compare_chat_models.py` 的 `--implementation sdk` / `langchain` 对照，注意每次命令都会发起一次真实模型请求，具体命令见讲义。
-5. 练习“LangChain 与供应商 SDK 的区别”，确认 Q01 理解后再推进 Q02 Prompt 模块。不要提前把历史消息加入本课。
-
-模型调用失败应显示错误，不降级伪装成模拟成功；调用前检查会话归属，失败不留下空会话。模型错误不得返回密钥或供应商原始私密错误正文。
-
-## 6. 验证记录与已知限制
-
-2026-11-05，本次交接提交前重新执行：
-
-- 后端格式：`uv run --locked ruff format --check backend scripts tests`。
-- 自动化：`uv run --locked python -m pytest tests -q`，包含真实本机 MySQL 集成与无付费请求的模型契约检查；结果见下方最近交接记录。
-- 前端：在 `frontend` 执行 `npm.cmd run format:check` 和 `npm.cmd run build`。
-- 已知构建提示：全量引入 Element Plus 使产物大于 Vite 建议阈值，构建可完成，后续再按需优化。
-- 本机 MySQL 集成测试只清理测试自己创建的令牌和会话，不清空用户数据。首次运行测试前需初始化种子数据。
-- 表结构目前靠 `create_all` 建基线，不会迁移已有列；未来改表要接入 Alembic。
-- Codex Windows 受限沙箱中异步 socketpair 曾阻塞；写入 E 盘、运行依赖相关测试可能需要工具权限审核。这是执行环境限制，不要为此改业务代码。
+下一阶段围绕实际服务会话接入 create_agent 和授权订单工具，使业务助手按需求选择工具、澄清信息，并保留取消、失败、持久化和权限约束；后续再做显式流程、恢复、人工确认与幂等。技术细节留在注释、调试和研发文档，页面只显示用户需要的执行状态与结果。不将检索配置作为前置，不一次堆入全部未完成功能。
 
 ## 7. 每次收工必须做
 
-1. 完成必要检查，在本文件更新当前进度、验证结果、待办及下一步，记录日期；不能将未执行的验证写成通过。
-2. 检查 `git diff` 与将要暂存的文件，确认没有 `.env`、真实密钥、IDE 配置、依赖、缓存或构建产物。
-3. 将代码和交接文档一起提交，推送 `origin/main`。用户已授权日常提交推送，无需重复询问。
-4. 推送被拒绝时先 fetch 并核对远端变动，不强推；保留本地提交，安全整合后重新验证、推送。
-5. 向用户报告提交短哈希、是否推送成功和下一台电脑的第一步。不要只做本地提交就宣称同步完成。
+1. 更新本文件当前状态、验证、未完成事项和下一步，不能将未执行的验证写成通过。
+2. 核对 git diff 与暂存内容，不提交 `.env`、密钥、IDE、依赖、缓存、构建产物或用户未授权的原有笔记。
+3. 将代码和文档一同提交并推送 origin/main，日常流程已获用户授权，无需重复询问。
+4. 推送被拒先 fetch 核对，不强推；保留本地提交并如实说明远端状态。
+5. 报告提交短哈希、推送结果，以及另一台电脑先拉取再读交接文档。
+
+---
+
+以下为历史交接记录；旧页面、接口、测试数量和下一步不代表当前状态。
 
 ### 最近交接记录
 

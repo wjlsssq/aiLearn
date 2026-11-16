@@ -63,7 +63,7 @@ def test_database_auth_chat_and_isolation(
             session_id = response.json()["session_id"]  # 记录待清理主键。
             assert response.json()["mode"] == "mock"  # 响应明确为模拟模式。
             assert (
-                response.json()["prompt_version"] == "1.1.0"
+                response.json()["prompt_version"] == "1.2.0"
             )  # 旧 Q01 调用使用默认模板。
             configured = client.post(
                 "/api/chat",
@@ -75,7 +75,7 @@ def test_database_auth_chat_and_isolation(
                 },
             )  # 在同一会话验证新配置的真实 API 与事务路径。
             assert configured.status_code == 200 and configured.json()["mode"] == "mock"
-            assert configured.json()["prompt_version"] == "1.1.0"
+            assert configured.json()["prompt_version"] == "1.2.0"
             failure_message = (
                 "model-failure-" + uuid.uuid4().hex[:12]
             )  # 本次检查的唯一消息。
@@ -149,3 +149,29 @@ def test_database_auth_chat_and_isolation(
                         == hashlib.sha256(token.encode()).hexdigest()
                     )
                 )  # 精确删除本次令牌。
+
+
+def test_logout_revokes_only_current_login():
+    tokens = []
+    try:
+        with TestClient(app) as client:
+            for _ in range(2):
+                response = client.post(
+                    "/api/login", json={"username": "alice", "password": "Learn123!"}
+                )
+                assert response.status_code == 200
+                tokens.append(response.json()["token"])
+            first = {"Authorization": "Bearer " + tokens[0]}
+            second = {"Authorization": "Bearer " + tokens[1]}
+            assert client.post("/api/logout", headers=first).status_code == 204
+            assert client.get("/api/me", headers=first).status_code == 401
+            assert client.get("/api/me", headers=second).json() == {"username": "alice"}
+    finally:
+        with SessionLocal.begin() as db:
+            for token in tokens:
+                db.execute(
+                    delete(AccessToken).where(
+                        AccessToken.token_hash
+                        == hashlib.sha256(token.encode()).hexdigest()
+                    )
+                )

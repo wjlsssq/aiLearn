@@ -2,7 +2,6 @@
 
 import hashlib
 import unicodedata
-from pathlib import Path
 from sqlalchemy.orm import Session
 from ..ai.rag.splitter import preview_document
 from ..core.errors import BusinessError
@@ -16,11 +15,6 @@ from ..schemas.knowledge import (
     SplitOptions,
     ChunkPreview,
 )
-
-
-def example_document() -> KnowledgeInput:
-    source = Path(__file__).resolve().parents[3] / "datasets" / "shop-rules-demo.md"
-    return KnowledgeInput(title="合成售后规则", text=source.read_text(encoding="utf-8"))
 
 
 def require_document(db: Session, user_id: int, document_id: int):

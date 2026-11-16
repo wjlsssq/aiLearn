@@ -1,48 +1,35 @@
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue' // 响应式状态与请求生命周期。
-import { createStreamMeter } from '../utils/stream-metrics' // Q05：每次尝试独立计时。
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue' // 响应式状态与请求生命周期。
 import { ElMessage } from 'element-plus' // 展示业务操作失败提示。
 import { ApiError } from '../api/client' // 根据状态码恢复登录页面。
-import { login as loginRequest } from '../api/auth' // 登录请求。
+import { currentUser as getCurrentUser, login as loginRequest } from '../api/auth' // 登录请求。
+import { logout as signOut } from '../api/auth'
 import { listOrders } from '../api/order' // 订单请求。
 import { listSessions, listMessages, streamMessage } from '../api/chat' // 会话与增量聊天请求。
 import { checkHealth } from '../api/health' // 系统探针请求。
-import { previewPrompt as previewPromptRequest } from '../api/prompt' // 模板预览请求。
 import { readToken, saveToken, clearToken } from '../utils/auth-storage' // 统一凭据存储。
-import type { Order, ChatSession, PromptStyle, PromptPreview } from '../types/api' // 页面共享类型。
+import type { Order, ChatSession } from '../types/api' // 页面共享类型。
 import type { ChatMessage, ChatTurn } from '../types/chat' // 仅用于当前页面的发送状态。
 
 export function useWorkbench() {
   // 一次调用对应一个工作台实例，不创建全局用户状态。
-  const username = ref('alice') // 公开教学用户名。
-  const password = ref('Learn123!') // 教学密码，非数据库连接密码。
+  const username = ref('') // 不在产品中预填或公开演示账号。
+  const password = ref('') // 凭据只在本次登录提交。
   const token = ref(readToken()) // 恢复当前标签页的登录状态。
   const status = ref('正在检查') // 系统健康状态。
-  const chatMode = ref('mock') // 以服务端健康接口返回的模式为准。
-  const modelName = ref<string | null>(null) // 页面只展示模型名，不接触 API Key。
-  const modelConfigured = ref(true) // 真实模式缺少配置时提示用户补齐。
+  const modelConfigured = ref(false) // 真实模式缺少配置时提示用户补齐。
   const busy = ref(false) // 串行化用户操作，避免会话切换竞争。
-  const previewBusy = ref(false) // 区分预览加载与模型发送加载。
   const sending = ref(false) // 模型生成不再占用整个页面的 busy 状态。
   const input = ref('') // 当前输入内容。
   const history = ref<ChatMessage[]>([]) // 立即展示的消息与持久化历史。
   const sessions = ref<ChatSession[]>([]) // 当前用户会话列表。
   const orders = ref<Order[]>([]) // 当前用户订单。
   const sessionId = ref<number | null>(null) // null 表示新会话。
-  const storeName = ref('ShopMind 教学店') // Q02：仅保存在当前工作台的业务变量。
-  const promptStyle = ref<PromptStyle>('concise') // 默认使用简洁风格。
-  const promptPreview = ref<PromptPreview | null>(null) // 后端渲染的消息，不在前端复制模板。
-  const previewVisible = ref(false) // 控制预览弹窗，展示与请求状态分开。
-  const lastPromptVersion = ref<string | null>(null) // 最近一次成功问答的模板版本。
-  const promptValid = computed(() => Boolean(storeName.value.trim())) // 避免发送空白店铺名。
+  const currentUser = ref('') // 身份从受认证接口恢复。
   const retryableTurn = ref<ChatTurn | null>(null) // 只重试当前会话的最后一个未完成问答。
   const retryMessageId = computed(() => retryableTurn.value?.assistant.localId ?? null)
   let controller: AbortController | null = null // 当前模型请求的取消入口。
   let activeTask: Promise<void> | null = null // 切换会话前等待当前流退出。
   let conversationVersion = 0 // 退出或切换后拒绝旧请求回写页面。
-  watch([input, storeName, promptStyle], () => {
-    promptPreview.value = null // 输入或配置变化后清除旧预览，避免把旧消息当成当前消息。
-    previewVisible.value = false // 已失效的预览不继续展示。
-  })
   function resetConversation() {
     // 新会话操作只更新页面状态，发送时才建库记录。
     sessionId.value = null // 清空当前会话 ID。
@@ -75,16 +62,20 @@ export function useWorkbench() {
     orders.value = [] // 防止残留上一位用户订单。
     sessions.value = [] // 清空会话摘要。
     input.value = '' // 不保留上一位用户未发送的文本。
-    storeName.value = 'ShopMind 教学店' // 新登录用户从默认业务配置开始。
-    promptStyle.value = 'concise' // 不继承上一位用户的风格选择。
-    promptPreview.value = null // 清除上一位用户的问题预览。
-    previewVisible.value = false // 关闭可能仍在显示的弹窗。
-    lastPromptVersion.value = null // 清除上一位用户的请求信息。
+    currentUser.value = ''
+    username.value = ''
+    password.value = ''
     controller?.abort()
     resetConversation() // 认证过期时同步清空，避免等待自己的发送任务造成死锁。
   }
   async function logout() {
     await stopAndWait()
+    try {
+      await signOut()
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 401))
+        ElMessage.warning('服务端退出未确认，已清除本机登录状态')
+    }
     clearIdentity()
   }
   function reportError(error: unknown) {
@@ -94,8 +85,14 @@ export function useWorkbench() {
   }
   async function refresh() {
     // 加载当前用户业务数据。
-    orders.value = await listOrders() // 订单范围在后端控制。
-    sessions.value = await listSessions() // 恢复会话摘要。
+    const [identity, orderRows, sessionRows] = await Promise.all([
+      getCurrentUser(),
+      listOrders(),
+      listSessions(),
+    ])
+    currentUser.value = identity.username
+    orders.value = orderRows
+    sessions.value = sessionRows
   }
   async function login() {
     // 表单提交后的认证流程。
@@ -104,6 +101,8 @@ export function useWorkbench() {
       // 登录成功后加载业务数据。
       const data = await loginRequest(username.value, password.value) // 提交账号凭据。
       token.value = data.token // 更新页面登录状态。
+      currentUser.value = data.username
+      password.value = '' // 登录完成立即清除表单密码。
       saveToken(data.token) // 后续 HTTP 请求读取最新凭据。
       await refresh() // 加载订单与会话。
     } catch (error) {
@@ -130,25 +129,6 @@ export function useWorkbench() {
       busy.value = false // 恢复交互。
     }
   }
-  function currentPromptOptions() {
-    // 预览和发送从同一份状态读取参数，后端负责最终校验。
-    return { store_name: storeName.value.trim(), style: promptStyle.value }
-  }
-  async function previewPrompt() {
-    // 预览不需要模型密钥；与发送共用 busy，期间禁止编辑或切换会话。
-    if (busy.value || !input.value.trim() || !promptValid.value) return
-    busy.value = true // 防止重复请求和配置变化。
-    previewBusy.value = true // 加载反馈显示在实际触发的预览按钮上。
-    try {
-      promptPreview.value = await previewPromptRequest(input.value.trim(), currentPromptOptions())
-      previewVisible.value = true // 成功取得消息后再打开弹窗。
-    } catch (error) {
-      reportError(error) // 错误仍走统一反馈和认证过期处理。
-    } finally {
-      previewBusy.value = false // 结束预览专属的加载反馈。
-      busy.value = false // 无论成功失败都恢复编辑。
-    }
-  }
   async function runTurn(turn: ChatTurn) {
     // 问题与配置在发起时固定，用户可以继续编辑下一条草稿。
     const requestController = new AbortController()
@@ -161,36 +141,20 @@ export function useWorkbench() {
     turn.assistant.content = ''
     turn.assistant.error = undefined
     let saved = false
-    const meter = createStreamMeter() // 在 HTTP 请求开始前计时，包括网络和服务端等待。
-    turn.assistant.metrics = { ...meter.metrics } // 重试时重置，避免沿用上次数据。
     try {
-      await streamMessage(
-        turn.question,
-        turn.sessionId,
-        turn.prompt,
-        requestController.signal,
-        (event) => {
-          if (version !== conversationVersion) return // 旧会话或旧身份不能更新当前页面。
-          if (event.event === 'start') {
-            chatMode.value = event.data.mode
-            modelName.value = event.data.model
-          } else if (event.event === 'delta') {
-            meter.text(event.data.text) // 只计正文事件，start 不代表首字。
-            turn.assistant.metrics = { ...meter.metrics } // 快照触发响应式更新。
-            turn.assistant.status = 'streaming'
-            turn.assistant.content += event.data.text // 每收到一块就显示，不在前端模拟打字。
-          } else {
-            saved = true // done 表示模型结束且数据库提交成功。
-            meter.end() // 完成耗时截至收到 done，不包括后续会话列表刷新。
-            turn.assistant.metrics = { ...meter.metrics }
-            sessionId.value = event.data.session_id
-            lastPromptVersion.value = event.data.prompt_version
-            turn.assistant.content = event.data.reply // 与最终入库正文保持一致。
-            turn.assistant.status = 'complete'
-            turn.user.status = 'complete'
-          }
-        },
-      )
+      await streamMessage(turn.question, turn.sessionId, requestController.signal, (event) => {
+        if (version !== conversationVersion) return // 旧会话或旧身份不能更新当前页面。
+        if (event.event === 'delta') {
+          turn.assistant.status = 'streaming'
+          turn.assistant.content += event.data.text // 每收到一块就显示，不在前端模拟打字。
+        } else if (event.event === 'done') {
+          saved = true // done 表示模型结束且数据库提交成功。
+          sessionId.value = event.data.session_id
+          turn.assistant.content = event.data.reply // 与最终入库正文保持一致。
+          turn.assistant.status = 'complete'
+          turn.user.status = 'complete'
+        }
+      })
     } catch (error) {
       if (version === conversationVersion && !saved) {
         turn.user.status = 'error'
@@ -204,8 +168,6 @@ export function useWorkbench() {
         if (error instanceof ApiError && error.status === 401) reportError(error)
       }
     } finally {
-      meter.end() // 失败或取消也记录本次结束时间，保留无首字的 null。
-      turn.assistant.metrics = { ...meter.metrics }
       if (controller === requestController) {
         controller = null
         sending.value = false
@@ -226,11 +188,9 @@ export function useWorkbench() {
   }
   async function send() {
     const question = input.value.trim()
-    if (!question || busy.value || sending.value || !modelConfigured.value || !promptValid.value)
-      return
+    if (!question || busy.value || sending.value || !modelConfigured.value) return
     const turn: ChatTurn = {
       question,
-      prompt: currentPromptOptions(), // 在清空输入和后续编辑之前记录配置。
       sessionId: sessionId.value,
       user: reactive({
         localId: crypto.randomUUID(),
@@ -262,12 +222,8 @@ export function useWorkbench() {
     try {
       // 健康探针成功后再加载业务数据。
       const health = await checkHealth() // 探测数据库及本地模型配置，不调用模型。
-      chatMode.value = health.chat_mode // 不在前端自行决定模型调用方式。
-      modelName.value = health.model_name // 展示配置中的模型名。
-      modelConfigured.value = health.model_configured // 未配置时禁止提交真实调用。
-      status.value = health.model_configured
-        ? '服务正常 · MySQL 已连接'
-        : 'MySQL 已连接 · 模型待配置' // 区分数据库状态和配置状态。
+      modelConfigured.value = health.chat_mode === 'llm' && health.model_configured // 未配置时禁止提交真实调用。
+      status.value = modelConfigured.value ? '服务已连接' : '智能服务尚未启用' // 区分数据库状态和配置状态。
     } catch (error) {
       status.value = '服务暂不可用'
       reportError(error)
@@ -284,14 +240,12 @@ export function useWorkbench() {
   })
   return {
     username,
+    currentUser,
     password,
     token,
     status,
-    chatMode,
-    modelName,
     modelConfigured,
     busy,
-    previewBusy,
     sending,
     retryMessageId,
     input,
@@ -299,12 +253,6 @@ export function useWorkbench() {
     sessions,
     orders,
     sessionId,
-    storeName,
-    promptStyle,
-    promptPreview,
-    previewVisible,
-    lastPromptVersion,
-    promptValid,
     newSession,
     login,
     logout,
@@ -312,6 +260,5 @@ export function useWorkbench() {
     send,
     stop,
     retry,
-    previewPrompt,
   } // 页面只调用业务操作，不依赖请求细节。
 }

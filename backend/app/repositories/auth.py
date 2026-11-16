@@ -1,6 +1,6 @@
 """认证数据访问，仅负责查询和持久化。"""
 
-from sqlalchemy import select  # 参数化查询。
+from sqlalchemy import select, delete  # 参数化查询。
 from sqlalchemy.orm import Session  # 当前事务上下文。
 from ..models import AccessToken, User  # 数据实体。
 
@@ -23,3 +23,7 @@ def add_token(
     db.add(
         AccessToken(token_hash=digest, user_id=user_id, expires_at=expires_at)
     )  # 提交边界由 Service 控制。
+
+
+def remove_token(db: Session, digest: str) -> None:
+    db.execute(delete(AccessToken).where(AccessToken.token_hash == digest))

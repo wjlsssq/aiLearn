@@ -1,16 +1,12 @@
 import { request } from './client'
 import type {
   KnowledgeInput,
-  SplitPreview,
   ImportResult,
   DocumentSummary,
   VersionSummary,
   KnowledgeVersion,
 } from '../types/knowledge'
 
-export const getKnowledgeExample = () => request<KnowledgeInput>('/knowledge/example')
-export const previewKnowledge = (body: KnowledgeInput) =>
-  request<SplitPreview>('/knowledge/preview', body)
 export const importKnowledge = (body: KnowledgeInput) =>
   request<ImportResult>('/knowledge/import', body)
 export const listKnowledge = () => request<DocumentSummary[]>('/knowledge/documents')

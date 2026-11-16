@@ -35,13 +35,12 @@ export interface HealthResponse {
   model_configured: boolean // 必需字段是否齐全，不代表已验证密钥有效。
 } // 服务状态。
 
-export type PromptStyle = 'concise' | 'detailed' // 仅允许后端支持的回答风格。
-export interface PromptOptions {
-  store_name: string // 必填店铺名称，只作为业务标签。
-  style: PromptStyle // 系统风格指令由后端映射。
+export interface CurrentUser {
+  username: string
 }
-export interface PromptPreview {
-  template_id: string // 当前业务模板标识。
-  version: string // 由后端维护的模板版本。
-  messages: { role: 'system' | 'user'; content: string }[] // 完整消息，以文本呈现。
+export interface OrderAssistantResponse {
+  status: 'complete' | 'blocked' | 'failed'
+  answer: string | null
+  order: Order | null
+  message: string
 }

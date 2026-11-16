@@ -1,20 +1,15 @@
 """Q06：区分结构校验、来源检查和业务授权；本阶段不写数据库。"""
 
 from ..ai.models.draft import extract_draft
+from ..core.errors import BusinessError
 from ..core.config import settings
 from ..schemas.draft import AfterSalesDraft, DraftInput, DraftReport
 
 
 def make_draft(body: DraftInput) -> DraftReport:
-    if settings.chat_mode == "mock":
-        # 固定样例不声称从任意文本成功抽取，页面必须标为模拟。
-        draft = AfterSalesDraft(
-            order_no=None, issue_type="unknown", reason=None, quantity=None
-        )
-    else:
-        draft = extract_draft(
-            body.description
-        )  # 模型只产生提议，无数据库或订单工具权限。
+    if settings.chat_mode != "llm":
+        raise BusinessError(503, "智能服务尚未启用，请联系管理员")
+    draft = extract_draft(body.description)
     if draft is None:
         return DraftReport(
             mode=settings.chat_mode,

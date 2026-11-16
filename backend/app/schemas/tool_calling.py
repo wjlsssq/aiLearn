@@ -1,11 +1,11 @@
-"""Q12：模型只提议工具参数，身份和执行预算始终由后端控制。"""
+"""订单助手请求、白名单工具参数与业务结果。"""
 
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from .order import OrderResponse
 
 
-class ToolExperimentInput(BaseModel):
+class OrderAssistantInput(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     question: str = Field(min_length=1, max_length=2000)
 
@@ -22,34 +22,10 @@ class OrderToolResult(BaseModel):
     status: Literal["found", "not_found", "invalid_arguments", "unknown_tool", "error"]
     message: str
     order: OrderResponse | None = None  # 只来自经过归属限定的 MySQL 查询。
-    logistics: str | None = None  # 明确标注教学模拟，没有接入物流服务。
 
 
-class ToolStep(BaseModel):
-    stage: Literal["model", "tool"]
-    label: str
-    status: Literal["done", "failed", "blocked"]
-    message: str
-    call_id: str | None = None
-    name: str | None = None
-    arguments: dict[str, str] = Field(
-        default_factory=dict
-    )  # 仅展示校验后的白名单参数。
-    result: OrderToolResult | None = None
-
-
-class ToolExperimentReport(BaseModel):
-    mode: Literal["mock", "llm"]
+class OrderAssistantResponse(BaseModel):
     status: Literal["complete", "blocked", "failed"]
     answer: str | None = None
-    model_calls: int = 0  # 模拟模式不冒充真实请求。
-    tool_executions: int = 0  # 只有通过白名单与参数校验才计入。
-    steps: list[ToolStep] = Field(default_factory=list)
-
-
-class OrderToolDefinition(BaseModel):
-    name: str
-    description: str
-    parameters: dict
-    max_tool_executions: int = 1
-    max_model_calls: int = 2
+    order: OrderResponse | None = None
+    message: str  # 对业务用户只暴露结果，不返回工具 schema、协议或执行轨迹。

@@ -1,100 +1,34 @@
-# 代码规范与目录职责
+# ShopMind 代码架构与产品约定
 
-这些约定来自用户要求：前端遵守 Prettier，前后端按清晰架构逐步扩展。根目录 `AGENTS.md` 是后续 Codex 修改代码必须读取和遵守的入口。
+以根目录 AGENTS.md 为约束。业务界面服务实际工作流，中文注释与独立文档解释实现；不把教学实验、技术参数、假统计塞进产品页面。
 
-## 前端目录
+## 前端结构
 
-```text
-frontend/
-  .prettierrc.json             # 唯一前端格式配置
-  .prettierignore              # 排除依赖、产物和生成的锁文件
-  src/
-    App.vue                   # 装配页面，不存放业务流程
-    main.ts                   # Vue、组件库与样式注册
-    views/WorkbenchView.vue   # 页面布局和组件绑定
-    components/workbench/     # 工作台展示组件
-      SessionSidebar.vue
-      LoginForm.vue
-      ChatPanel.vue
-      OrderPanel.vue
-    composables/useWorkbench.ts # 响应式状态和业务操作
-    api/                      # client.ts + auth/chat/order/health 接口
-    types/api.ts              # 前后端共享的数据契约类型
-    utils/auth-storage.ts     # 无 UI 依赖的凭据存储工具
-    styles/workbench.css      # 格式化后的全局和工作台样式
-```
+- `App.vue`：中文组件配置与页面入口。`main.ts` 只注册实际使用的 Element Plus 组件。
+- `views/WorkbenchView.vue`：业务导航、会话布局及抽屉组合。`OrdersView.vue` / `KnowledgeView.vue` 组合订单与资料页面。
+- `components/workbench`：登录、会话列表、消息区和订单上下文；`components/agent`：订单助手；`components/after-sales`：售后资料；`components/common`：一致的图标。
+- `composables`：useWorkbench 负责会话生命周期；useOrderAssistant / useAfterSalesDraft / useKnowledge 分别管理业务请求状态、身份变化和旧响应拒收。
+- `api/client.ts`：认证头、错误转换、204 和流读取。按业务域的 API 文件不访问组件状态。
+- `types`：请求响应契约；`utils`：凭据存储和纯 SSE 解析。
+- `styles`：theme / app-shell / conversations / resources / login 各司其职，workbench.css 聚合并放响应式规则。
 
-数据流：用户触发组件事件 → 页面绑定 composable 操作 → 业务 API → 公共 HTTP 客户端 → 后端。请求结果由 composable 更新状态，再通过 props 传给组件。
+组件通过 props/emits 协作，不直接发 HTTP。所有手写 Vue/TS/CSS/JSON 运行项目 Prettier；修改后执行 format:check 和 build。依赖通过 scripts/install_frontend.ps1 安装到 E 盘，不在源码目录 npm install。
 
-组件使用 props、emits 和明确的 v-model 契约协作，不修改父级传入的 props。API 模块声明具体返回类型，不操作 Vue 状态或弹出提示。`api/client.ts` 只处理公共 HTTP 行为，避免把认证页面逻辑放进请求封装。
+## 后端结构
 
-Vue 组件使用 PascalCase 命名；页面以 View 结尾；composable 以 use 开头；其他文件按业务命名。只为已有功能建立文件，禁止为了凑结构预建大量空页面。
+API 只适配 HTTP，Service 决定身份、业务规则与事务，Repository 写参数化 SQL，ORM/DB 定义实体和连接。业务异常在 main.py 统一映射为 HTTP；不得反向导入应用入口获得配置。
 
-## 后端目录
+- `api/routes/auth.py`：login / me / logout；退出只撤销当前令牌。
+- `api/routes/assistant.py`：面向产品的订单助手，结果不暴露工具 schema 或轨迹。
+- `services/assistant.py` 转换业务响应；`services/tool_calling.py` 保留白名单、预算和严格参数校验。
+- `ai/tools/order.py` 接收服务层注入的查询回调，工具参数中不包含 user_id。Repository 查询必须同时限定用户与订单编号。
+- `services/chat.py` 管理会话归属和成对写入；AI 网关只处理模型协议，数据库事务不跨模型等待。
+- `services/draft.py` 保留字段与来源检查，草稿不等于工单；服务未启用时不返回固定演示结果。
+- `services/knowledge.py` 管理私有文档与版本，切分由 ai/rag/splitter.py 内部完成；接口不再提供教学样例或分块 A/B 预览。
+- 新表与改表经 `backend/migrations` / `backend/alembic.ini` 管理，原五张表仅保留初始化基线。
 
-```text
-backend/app/
-  main.py                     # 创建应用、注册路由、映射业务异常
-  api/
-    router.py                 # 聚合业务路由与 /api 前缀
-    dependencies.py           # Bearer 凭据到认证用户的 HTTP 适配
-    routes/                   # auth/chat/order/health 路由
-  schemas/                    # 请求与响应 Pydantic DTO
-  services/                   # 业务规则、用户归属检查、事务边界
-  repositories/               # SQL 查询、实体新增和必要的 flush
-  models/entities.py          # ORM 实体与字段约束
-  models/__init__.py          # 明确导出实体和注册元数据
-  db/session.py               # 引擎、SessionLocal、Base、get_db
-  core/config.py              # 从项目根目录定位 .env
-  core/security.py            # 密码算法和令牌摘要
-  core/errors.py              # 业务异常类型
-  ai/models/factory.py        # 供应商模型工厂和配置校验
-  ai/models/gateway.py        # 单次模型调用、统一结果和外部错误边界
-  ai/prompts/customer_service.py # 版本化客服模板与变量
-  ai/chains/customer_service.py  # Q03 固定 LCEL 链与请求内步骤观察器
-```
+## 验证与交接
 
-依赖方向：API → Service → Repository → ORM / DB。API 负责 HTTP 参数与响应契约；Service 负责业务决定和提交；Repository 负责执行 SQL，不导入 FastAPI，不自行提交事务；ORM 实体不导入路由。
+必须验证真实 MySQL、认证和数据归属；模型测试使用内存 HTTP 传输验证真实适配器，不消耗付费额度。SSE 测试检查中文跨字节、合并帧和截断。UI 验收在独立端口运行，临时替身与日志不提交，原有服务不被重启。
 
-会话读取与写入共用 Service 中的归属检查，Repository 在 SQL 中同时限定会话 ID 与用户 ID。问答和新会话保持在同一事务中。请求关闭时，数据库依赖负责回滚尚未提交的事务。
-
-初始化脚本从 `core/security.py` 导入密码工具，避免为了复用一个函数而创建整套 Web 应用。以后增加实体时同步登记明确的实体导出入口和数据库迁移。
-
-后续知识库模块按同一职责增加 `schemas/knowledge.py`、`services/knowledge.py`、`repositories/knowledge.py` 等；LangChain 实现放 `app/ai`，需要时再创建。禁止向 main.py 或单个页面继续堆叠新业务。
-
-## 格式与验证命令
-
-前端在 frontend 目录执行：
-
-```powershell
-# 根据 Prettier 配置整理所有手写前端文件。
-npm.cmd run format
-# 只检查，不写文件；不符合时返回非零退出码。
-npm.cmd run format:check
-# 检查 TypeScript 并构建前端。
-npm.cmd run build
-```
-
-Prettier 统一两空格缩进、单引号、无分号、LF 换行、100 字符目标行宽及 Vue 属性换行。锁文件自动生成，格式化时排除。IDE 安装 Prettier 支持后，选择 `frontend/node_modules/prettier`，使用项目内配置，启用保存时格式化。
-
-后端在项目根目录执行：
-
-```powershell
-# 检查 Python 文件格式。
-uv run --locked ruff format --check backend scripts tests
-# 验证真实 MySQL 下的认证、归属隔离、消息持久化和错误响应。
-uv run --locked python -m pytest tests -q
-```
-
-Python 保持四空格缩进。教学注释继续解释实际语句、输入输出和事务边界；复杂表达式拆行，避免多个操作挤在一行。
-
-`npm install` 必须在 E 盘实际依赖目录中运行，安装或升级后把 package.json 和 package-lock.json 同步回前端源码目录；重装依赖使用 `scripts/install_frontend.ps1`。`.idea` 属于本机配置，不进入版本库。
-
-
-Q06 草稿模块：`schemas/draft.py` 定义字段与报告，`ai/prompts/draft.py` 生成提取消息，`ai/models/draft.py` 处理供应商结构化调用，`services/draft.py` 做来源与缺失项判断，`api/routes/draft.py` 提供认证接口；前端对应 `DraftLab.vue`、`useDraftLab.ts`、`api/draft.ts`、`types/draft.ts`。本阶段不持久化，不为草稿创建空 Repository 或数据库表。
-
-
-Q07 知识模块：`schemas/knowledge.py` 定义契约，`ai/rag/splitter.py` 只做规范化与切分，`services/knowledge.py` 管理归属、版本与事务，`repositories/knowledge.py` 管理查询及锁，`models/knowledge.py` 定义三张知识表。数据库增量变更放 `backend/migrations/versions`，通过 `backend/alembic.ini` 运行；原五张表保留初始化基线。前端使用 `components/knowledge`、`useKnowledge.ts`、`api/knowledge.ts`、`types/knowledge.ts`，由 WorkbenchView 组合，不在组件里发 HTTP。合成规则样例放 `datasets/shop-rules-demo.md`。
-
-
-Q12 工具实验：`schemas/tool_calling.py` 定义白名单参数与轨迹报告，`ai/tools/order.py` 定义 StructuredTool 并接收业务回调，`ai/models/tool_calling.py` 封装模型提议与 ToolMessage 回传，`services/tool_calling.py` 决定预算、授权身份、执行和失败结果；订单查询复用 `services/order.py` 与 `repositories/order.py`，SQL 必须同时限定用户和订单号。前端由 `components/agent/ToolCallingPanel.vue`、`useToolCalling.ts`、`api/tool-calling.ts`、`types/tool-calling.ts` 分工。不要把 user_id 放进模型 schema 或让 AI 模块反向导入业务服务。
+修改前 git status → git pull --ff-only → 读 AGENTS.md / 交接；完成后更新交接、检查暂存区、提交并推送。环境、密钥、IDE、依赖、缓存和运行产物不得提交。用户原有未提交笔记保留。

@@ -115,20 +115,16 @@ def knowledge_case():
                     )
 
 
-def test_preview_is_read_only_and_routes_reject_invalid_input(knowledge_case):
+def test_import_auth_and_invalid_input_have_no_partial_documents(knowledge_case):
     client, title, _, alice, _ = knowledge_case
     payload = body("示例规则" * 40, title=title).model_dump()
-    assert client.post("/api/knowledge/preview", json=payload).status_code == 401
     assert client.post("/api/knowledge/import", json=payload).status_code == 401
     assert client.get("/api/knowledge/documents").status_code == 401
     assert (
         client.post("/api/knowledge/preview", headers=alice, json=payload).status_code
-        == 200
+        == 404
     )
-    assert all(
-        row["title"] != title
-        for row in client.get("/api/knowledge/documents", headers=alice).json()
-    )
+    assert client.get("/api/knowledge/example", headers=alice).status_code == 404
     for change in (
         {"text": " "},
         {"text": "a" * 20001},
@@ -139,7 +135,7 @@ def test_preview_is_read_only_and_routes_reject_invalid_input(knowledge_case):
     ):
         assert (
             client.post(
-                "/api/knowledge/preview", headers=alice, json={**payload, **change}
+                "/api/knowledge/import", headers=alice, json={**payload, **change}
             ).status_code
             == 422
         )
@@ -148,8 +144,10 @@ def test_preview_is_read_only_and_routes_reject_invalid_input(knowledge_case):
         client.post("/api/knowledge/import", headers=alice, json=too_many).status_code
         == 422
     )
-    example = client.get("/api/knowledge/example", headers=alice)
-    assert example.status_code == 200 and "合成" in example.json()["text"]
+    assert all(
+        row["title"] != title
+        for row in client.get("/api/knowledge/documents", headers=alice).json()
+    )
 
 
 def test_mysql_dedup_versions_source_and_user_isolation(knowledge_case):

@@ -1,199 +1,217 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
-import ToolCallingPanel from '../components/agent/ToolCallingPanel.vue'
-import { useToolCalling } from '../composables/useToolCalling'
-import KnowledgePanel from '../components/knowledge/KnowledgePanel.vue'
-import { useKnowledge } from '../composables/useKnowledge'
-import DraftLab from '../components/workbench/DraftLab.vue'
-import { useDraftLab } from '../composables/useDraftLab'
-import SessionSidebar from '../components/workbench/SessionSidebar.vue' // 会话导航。
-import LoginForm from '../components/workbench/LoginForm.vue' // 登录表单。
-import ChatPanel from '../components/workbench/ChatPanel.vue' // 对话展示与输入。
-import OrderPanel from '../components/workbench/OrderPanel.vue' // 模拟订单展示。
-import PromptPanel from '../components/workbench/PromptPanel.vue' // Q02：模板配置与消息预览。
-import ChainLab from '../components/workbench/ChainLab.vue'
-import { useChainLab } from '../composables/useChainLab'
-import { useWorkbench } from '../composables/useWorkbench' // 业务状态和操作统一入口。
-const {
-  username,
-  password,
-  token,
-  status,
-  chatMode,
-  modelName,
-  modelConfigured,
-  busy,
-  previewBusy,
-  sending,
-  retryMessageId,
-  input,
-  history,
-  sessions,
-  orders,
-  sessionId,
-  storeName,
-  promptStyle,
-  promptPreview,
-  previewVisible,
-  lastPromptVersion,
-  promptValid,
-  newSession,
-  login,
-  logout,
-  openSession,
-  send,
-  stop,
-  retry,
-  previewPrompt,
-} = useWorkbench() // 页面仅组合组件和绑定状态。
-const lab = useChainLab(token, logout)
-const draftLab = reactive(useDraftLab(token, logout)) // 展示组件与提取业务状态分离。
-const knowledge = reactive(useKnowledge(token, logout))
-const toolCalling = reactive(useToolCalling(token, logout))
-// 解构 ref 供模板自动解包，避免组件接收到 Ref 对象。
-const {
-  visible: chainVisible,
-  busy: chainBusy,
-  method,
-  first,
-  second,
-  prompt: chainPrompt,
-  report: chainReport,
-  error: chainError,
-  valid: chainValid,
-} = lab
+import { computed, reactive, ref, watch } from 'vue'
+import AppIcon from '../components/common/AppIcon.vue'
+import SessionSidebar from '../components/workbench/SessionSidebar.vue'
+import LoginForm from '../components/workbench/LoginForm.vue'
+import ChatPanel from '../components/workbench/ChatPanel.vue'
+import OrderPanel from '../components/workbench/OrderPanel.vue'
+import OrderAssistant from '../components/agent/OrderAssistant.vue'
+import DraftPanel from '../components/after-sales/DraftPanel.vue'
+import OrdersView from './OrdersView.vue'
+import KnowledgeView from './KnowledgeView.vue'
+import { useWorkbench } from '../composables/useWorkbench'
+import { useOrderAssistant } from '../composables/useOrderAssistant'
+import { useAfterSalesDraft } from '../composables/useAfterSalesDraft'
+const state = useWorkbench()
+const work = reactive(state)
+const assistant = reactive(useOrderAssistant(state.token, state.logout))
+const draft = reactive(useAfterSalesDraft(state.token, state.logout))
+const page = ref<'conversations' | 'orders' | 'knowledge'>('conversations')
+const mobileNav = ref(false)
+const contextVisible = ref(true)
+const titles = { conversations: '会话工作台', orders: '订单中心', knowledge: '规则文档' }
+const sessionTitle = computed(
+  () => work.sessions.find((s) => s.id === work.sessionId)?.title ?? '新会话',
+)
+watch(state.token, () => {
+  page.value = 'conversations'
+  mobileNav.value = false
+})
+function navigate(next: typeof page.value) {
+  page.value = next
+  mobileNav.value = false
+}
+function toggleContext() {
+  if (window.matchMedia('(max-width: 1050px)').matches) page.value = 'orders'
+  else contextVisible.value = !contextVisible.value
+}
+function askOrder(number?: string) {
+  assistant.open(number)
+}
 </script>
 <template>
-  <!-- 按会话导航、主内容和订单信息组织工作台。 -->
-  <div class="workspace">
-    <SessionSidebar
-      :authenticated="Boolean(token)"
-      :busy="busy"
-      :sessions="sessions"
-      :session-id="sessionId"
-      @new-session="newSession"
-      @open-session="openSession"
-    />
-    <main>
-      <header>
+  <LoginForm
+    v-if="!work.token"
+    v-model:username="work.username"
+    v-model:password="work.password"
+    :busy="work.busy"
+    @submit="work.login"
+  />
+  <div
+    v-else
+    class="app-shell"
+  >
+    <nav
+      class="app-nav"
+      :class="{ 'is-open': mobileNav }"
+      aria-label="业务导航"
+    >
+      <a
+        class="brand"
+        href="#"
+        @click.prevent="navigate('conversations')"
+      >
+        <span class="brand-symbol">
+          <AppIcon
+            name="spark"
+            :size="23"
+          />
+        </span>
+        <strong>
+          ShopMind
+          <span>服务工作空间</span>
+        </strong>
+      </a>
+      <div class="workspace-label">
+        <span class="workspace-avatar">S</span>
         <div>
-          <p class="eyebrow">CUSTOMER SUPPORT</p>
-          <h1>售后服务助手</h1>
+          服务工作台
+          <small>WORKSPACE</small>
         </div>
-        <div class="status">
-          ● {{ status }}
-          <el-button
-            v-if="token"
-            :disabled="busy"
-            size="small"
-            @click="logout"
+        <span class="workspace-dot" />
+      </div>
+      <p class="nav-caption">工作空间</p>
+      <button
+        :class="{ active: page === 'conversations' }"
+        @click="navigate('conversations')"
+      >
+        <AppIcon name="inbox" />
+        会话工作台
+        <span class="nav-count">{{ work.sessions.length }}</span>
+      </button>
+      <button
+        :class="{ active: page === 'orders' }"
+        @click="navigate('orders')"
+      >
+        <AppIcon name="orders" />
+        订单中心
+      </button>
+      <button
+        :class="{ active: page === 'knowledge' }"
+        @click="navigate('knowledge')"
+      >
+        <AppIcon name="book" />
+        规则文档
+      </button>
+      <div class="nav-bottom">
+        <span class="account-avatar">{{ work.currentUser.slice(0, 1).toUpperCase() || 'U' }}</span>
+        <div>
+          <strong>{{ work.currentUser || '当前账号' }}</strong>
+          <small>已登录</small>
+        </div>
+        <button
+          class="icon-button"
+          aria-label="退出登录"
+          @click="work.logout"
+        >
+          <AppIcon
+            name="logout"
+            :size="18"
+          />
+        </button>
+      </div>
+    </nav>
+    <button
+      v-if="mobileNav"
+      class="nav-mask"
+      aria-label="关闭导航"
+      @click="mobileNav = false"
+    />
+    <main class="app-main">
+      <header class="app-header">
+        <div class="header-title">
+          <button
+            class="icon-button mobile-menu"
+            aria-label="打开导航"
+            @click="mobileNav = true"
           >
-            退出登录
-          </el-button>
+            <AppIcon name="menu" />
+          </button>
+          <span>工作空间</span>
+          <AppIcon
+            name="chevron"
+            :size="14"
+          />
+          <h1>{{ titles[page] }}</h1>
+        </div>
+        <div class="connection-status">
+          <i :class="{ connected: work.modelConfigured }" />
+          {{ work.status }}
         </div>
       </header>
-      <LoginForm
-        v-if="!token"
-        v-model:username="username"
-        v-model:password="password"
-        :busy="busy"
-        @submit="login"
-      />
       <div
-        v-else
-        class="content"
+        v-if="page === 'conversations'"
+        class="conversation-workspace"
       >
+        <SessionSidebar
+          :busy="work.busy"
+          :sessions="work.sessions"
+          :session-id="work.sessionId"
+          @new-session="work.newSession"
+          @open-session="work.openSession"
+        />
         <ChatPanel
-          v-model:input="input"
-          :busy="busy"
-          :preview-busy="previewBusy"
-          :sending="sending"
-          :retry-message-id="retryMessageId"
-          :history="history"
-          :chat-mode="chatMode"
-          :model-name="modelName"
-          :model-configured="modelConfigured"
-          :prompt-valid="promptValid"
-          @send="send"
-          @stop="stop"
-          @retry="retry"
-        >
-          <template #settings>
-            <ToolCallingPanel
-              v-model:visible="toolCalling.visible"
-              v-model:question="toolCalling.question"
-              :busy="toolCalling.busy"
-              :mode="chatMode"
-              :definition="toolCalling.definition"
-              :report="toolCalling.report"
-              :error="toolCalling.error"
-              @open="toolCalling.open"
-              @run="toolCalling.run"
-            />
-            <KnowledgePanel
-              v-model:visible="knowledge.visible"
-              v-model:title="knowledge.title"
-              v-model:text="knowledge.text"
-              v-model:first="knowledge.first"
-              v-model:second="knowledge.second"
-              :busy="knowledge.busy"
-              :valid="knowledge.valid"
-              :previews="knowledge.previews"
-              :imported="knowledge.imported"
-              :documents="knowledge.documents"
-              :versions="knowledge.versions"
-              :selected-document="knowledge.selectedDocument"
-              :saved="knowledge.saved"
-              :error="knowledge.error"
-              @open="knowledge.open"
-              @compare="knowledge.compare"
-              @save="knowledge.save"
-              @load="knowledge.load"
-              @upload="knowledge.upload"
-            />
-            <DraftLab
-              v-model:visible="draftLab.visible"
-              v-model:description="draftLab.description"
-              :busy="draftLab.busy"
-              :mode="chatMode"
-              :report="draftLab.report"
-              :error="draftLab.error"
-              @run="draftLab.run"
-            />
-            <PromptPanel
-              v-model:store-name="storeName"
-              v-model:style="promptStyle"
-              v-model:visible="previewVisible"
-              :busy="busy"
-              :preview-busy="previewBusy"
-              :has-question="Boolean(input.trim())"
-              :preview="promptPreview"
-              :last-version="lastPromptVersion"
-              @preview="previewPrompt"
-            />
-            <ChainLab
-              v-model:visible="chainVisible"
-              v-model:method="method"
-              v-model:first="first"
-              v-model:second="second"
-              :busy="chainBusy"
-              :valid="chainValid"
-              :enabled="promptValid && !busy"
-              :mode="chatMode"
-              :prompt="chainPrompt"
-              :report="chainReport"
-              :error="chainError"
-              @open="lab.open({ store_name: storeName, style: promptStyle }, input)"
-              @run="lab.run"
-            />
-          </template>
-        </ChatPanel>
+          v-model:input="work.input"
+          :title="sessionTitle"
+          :busy="work.busy"
+          :sending="work.sending"
+          :retry-message-id="work.retryMessageId"
+          :history="work.history"
+          :ready="work.modelConfigured"
+          @send="work.send"
+          @stop="work.stop"
+          @retry="work.retry"
+          @toggle-context="toggleContext"
+          @draft="draft.open(work.input)"
+        />
         <OrderPanel
-          :orders="orders"
-          :busy="busy"
-          @logout="logout"
+          v-if="contextVisible"
+          :orders="work.orders"
+          :ready="work.modelConfigured"
+          @query="askOrder"
+          @draft="draft.open(work.input)"
         />
       </div>
+      <OrdersView
+        v-else-if="page === 'orders'"
+        :orders="work.orders"
+        :ready="work.modelConfigured"
+        @query="askOrder"
+      />
+      <KnowledgeView
+        v-else
+        :token="state.token"
+        :logout="work.logout"
+      />
     </main>
+    <OrderAssistant
+      v-model:visible="assistant.visible"
+      v-model:question="assistant.question"
+      :busy="assistant.busy"
+      :result="assistant.result"
+      :error="assistant.error"
+      :ready="work.modelConfigured"
+      @submit="assistant.run"
+    />
+    <DraftPanel
+      v-model:visible="draft.visible"
+      v-model:description="draft.description"
+      :busy="draft.busy"
+      :report="draft.report"
+      :error="draft.error"
+      :ready="work.modelConfigured"
+      @submit="draft.run"
+      @copy="draft.copy"
+    />
   </div>
 </template>

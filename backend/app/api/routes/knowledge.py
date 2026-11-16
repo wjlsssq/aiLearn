@@ -15,17 +15,7 @@ from ...schemas.knowledge import (
 )
 from ...services import knowledge as service
 
-router = APIRouter(prefix="/knowledge", tags=["文档切分与版本"])
-
-
-@router.get("/example", response_model=KnowledgeInput)
-def example(user: User = Depends(current_user)):
-    return service.example_document()  # 固定合成样例，不读取用户指定的本机路径。
-
-
-@router.post("/preview", response_model=SplitPreview)
-def preview(body: KnowledgeInput, user: User = Depends(current_user)):
-    return service.preview_document(body)  # 不写数据库，不调用模型。
+router = APIRouter(prefix="/knowledge", tags=["服务文档"])
 
 
 @router.post("/import", response_model=ImportResult)

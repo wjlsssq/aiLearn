@@ -1,62 +1,54 @@
-# ShopMind：用智能售后客服学习 LangChain
+# ShopMind · AI 服务工作空间
 
-> aiLearn · 个人ai学习
+将会话、订单与服务资料放在同一工作台，面向实际售后服务流程持续构建 Agent 应用。
 
-面向有 Java 后端经验、Python 基础较少的学习者。目标是完成一个可演示的前后端项目，并能在面试中结合自己的实现解释 LangChain、RAG、Agent 和工程设计。
+## 当前能力
 
-## 项目场景
+- 会话工作台：流式回复、停止生成、重试、历史恢复与搜索。
+- 订单中心：当前账号订单列表、搜索和自然语言订单查询。
+- 售后资料：从描述提取订单号、问题类型、原因与数量，核对后复制使用。
+- 规则文档：导入 UTF-8 文本，保存版本与查阅历史；自动检索引用尚未启用。
+- 登录与退出：身份从服务端恢复；退出撤销当前令牌，保留其他设备登录。
 
-用户问“这款耳机能七天无理由退货吗？”，客服从店铺规则中检索依据；用户接着问“那我的订单呢？”，客服查询当前用户的 MySQL 订单；用户申请售后时，系统生成草稿，等待用户确认后创建模拟售后工单。
+产品页面只显示业务操作和结果，技术协议留在后端代码中。订单助手目前是受控的单工具流程，完整 create_agent、团队权限与审批流程仍在后续建设中，不以页面改造替代这些能力的实现。
 
-所有订单、物流和售后均为教学模拟数据。
+## 开始运行
 
-## 计划入口
-
-- **当前学习路线：Agent 与业务流程**。按用户要求跳过文档检索，先读 [Q12：订单 Tool Calling](docs/lessons/Q12-tool-calling.md)，再进入 Q13 create_agent、Q14 图流程、Q15 恢复、Q16 确认与幂等。
-- [Q07：文档切分与版本](docs/lessons/Q07-document-chunking.md)：上传纯文本、双参数对比、来源高亮、MySQL 版本与迁移。
-- [Q06：结构化售后草稿](docs/lessons/Q06-structured-output.md)：JSON mode、Pydantic 严格校验、缺失追问与失败边界。
-
-- [Q05：流式输出与取消](docs/lessons/Q05-streaming-cancellation.md)：首段/结束耗时、协议、断点和失败实验。
-
-- [双电脑交接与当前待办](docs/07-handoff.md)：每次修改前先拉取、阅读；完成后更新并随代码提交推送。
-- [Q01：模型调用与 LangChain 的作用](docs/lessons/Q01-langchain-models.md)：DeepSeek 配置、断点、SDK 对照与面试练习。
-- [Q02：Prompt 与消息角色](docs/lessons/Q02-prompt-messages.md)：店铺变量、风格切换、消息预览、模板版本和断点练习。
-- [Q03：Runnable / LCEL 流水线](docs/lessons/Q03-runnable-lcel.md)：步骤类型预览、两题 batch、失败定位及 invoke / stream 对照。
-- [聊天交互与流式输出](docs/08-streaming-chat.md)：即时用户消息、模型增量、停止生成、原位重试和保存边界。
-- [IDEA 启动与断点调试](docs/06-idea-debugging.md)：右键 backend/run.py 启动，逐步观察 HTTP 请求。
-- [代码规范与目录职责](docs/05-code-conventions.md)：Prettier、后端格式与分层要求；后续修改还须遵守根目录 AGENTS.md。
-- [项目启动与阶段 0 验收](docs/04-running.md)：登录、聊天、订单和测试命令。
-- [Python 3.12 环境与使用方法](docs/00-environment.md)：解释器、虚拟环境、依赖和环境重建。
-- [项目与学习计划](docs/01-project-plan.md)：技术栈、阶段安排、数据库、注释与教学规范。
-- [20 道面试题与功能映射](docs/02-interview-map.md)：每题对应一个模块、验收案例和追问。
-- [检索资料与版本依据](docs/03-references.md)：官方文档和公开面经，检索日期为 2026-11-05。
-
-## 当前进度
-
-- 最新课程：Q12 只读订单工具实验已实现，页面可观察模型提议、后端查询与 ToolMessage 回传。Q08～Q11 暂跳过，不作为 Agent 学习前置。
-- Q07 文档准备保留为可选实验；使用该模块需执行 `uv sync --locked`、`uv run --locked alembic -c backend/alembic.ini upgrade head`。新库先执行 `scripts.init_db`，完整步骤见 Q07 讲义。
-- Q01～Q06 已逐步完成模型调用、Prompt、Runnable、上下文、流式与结构化草稿；Q07 尚未将规则接入聊天，Q08/Q09 再实现检索与证据回答。
-- 已完成：场景选择、技术路线、20 个模块的递进计划和验收设计。
-- 环境已准备：Python 3.12.13、虚拟环境和依赖缓存实际存放在 `E:\ailearn-runtime\shopmind`；根目录 `.venv` 等入口通过目录联接访问 E 盘，依赖版本保存在 `uv.lock`。
-- 数据库已确认：两台电脑分别使用 MySQL 8.0.35 / 8.0.45；本机配置和恢复记录见交接文档。
-- 阶段 0 已实现：Vue 工作台、FastAPI、MySQL、登录、订单隔离、会话历史和模拟聊天。
-- Q01 已实现模型工厂、DeepSeek 调用和 SDK 对照脚本；真实模式由本机 .env 配置，真实服务验收与离线自动化测试分别记录。
-- Q02 已实现版本化客服 Prompt、店铺名称与简洁/详细风格配置、无需模型请求的消息预览；预览与聊天使用相同渲染函数。真实调用及风格效果由用户在 IDEA 调试验收。
-- Q03 已实现独立的流水线实验：规范化 → Prompt → 模型 → 文本解析，可离线预览步骤或运行一题 / 两题 batch，显示实际类型与失败位置，不保存聊天。
-- 按用户体验要求提前接入 Q05 的流式基础：工作台通过 `/api/chat/stream` 接收真实模型增量，立即展示用户消息，支持停止、原位重试和下一条草稿；普通 `/api/chat` 继续保留，当前课程进入 Q03。
-- Q04 已实现 MySQL 会话历史恢复与有界多轮上下文，同步和流式共用裁剪规则。
-- [Q04：多轮上下文与会话记忆](docs/lessons/Q04-conversation-history.md)：完整轮次裁剪、断点与面试练习。
-
-## 快速检查 Python 环境
-
-在项目根目录的 PowerShell 中执行：
+Python 3.12、虚拟环境、缓存与前端依赖统一位于 E 盘。新电脑先按 [环境恢复](docs/00-environment.md) 创建目录联接；每次修改前先拉取代码并读 [项目约定](AGENTS.md)、[交接文档](docs/07-handoff.md)。
 
 ```powershell
-# 使用项目虚拟环境，确认 Python 为 3.12.13。
-& '.\.venv\Scripts\python.exe' --version
-
-# 核实所有基础依赖和后续使用的 Agent API 可加载。
-& '.\.venv\Scripts\python.exe' '.\scripts\check_environment.py'
+uv sync --locked
+# 仅本机没有 .env 时从 .env.example 复制，并填写数据库与模型配置。
+# 新的本地开发库通过下面命令初始化，已有数据不会清空。
+uv run --locked python -m scripts.init_db
+uv run --locked alembic -c backend/alembic.ini upgrade head
+# 或在 IDEA 右键 backend/run.py 选择 Debug。
+uv run --locked python backend/run.py
 ```
 
-每次推进一个主问题：先看功能，再讲概念与调用链，逐行读代码，做对照实验，最后练习面试表达。
+前端首次准备依赖，在根目录执行 `powershell -ExecutionPolicy Bypass -File scripts/install_frontend.ps1`；随后在 `frontend` 执行 `npm.cmd run dev`，访问 `http://127.0.0.1:5173`。
+
+产品智能功能要求 `CHAT_MODE=llm` 与有效模型配置。未启用时界面保留资料和历史查看，禁用智能操作；订单助手和资料提取接口返回 503，不伪造模拟业务结果。`mock` 仅供底层自动化回归，不是产品演示入口。
+
+`init_db` 是本地开发种子脚本，包含合成账号及订单，不作为生产开户方式。已有示例数据原样保留并保留其模拟标识；业务数据不会随 Git 同步。
+
+## 目录与验证
+
+后端遵循 API → Service → Repository → ORM/DB；AI 适配和工具放 `backend/app/ai`。前端页面组合在 views，组件按业务域划分，操作流程在 composables，HTTP 与 DTO 分别在 api/types。样式按主题、外壳、会话、资源、登录拆分。
+
+```powershell
+uv run --locked ruff format --check backend scripts tests
+uv run --locked python -m pytest tests -q
+# 以下在 frontend 执行。
+npm.cmd run format:check
+node --test tests/*.test.mjs
+npm.cmd run build
+```
+
+- [产品设计与调研](docs/09-product-workspace.md)：页面结构、参考来源、清理范围与能力边界。
+- [代码架构](docs/05-code-conventions.md)、[启动说明](docs/04-running.md)、[IDEA 调试](docs/06-idea-debugging.md)。
+- [双电脑交接](docs/07-handoff.md)：当前状态、验证和下一步。
+
+## 研发资料
+
+中文代码注释与课程资料继续供断点学习使用，产品不展示教学内容。原 LCEL、Prompt 预览、工具实验、分块 A/B 与对照脚本已退出运行代码，旧讲义涉及的这些入口可在 Git 历史 `b3bc15a` 查看；当前实现以本文和产品设计文档为准。用户要求继续 Agent 业务路线，不强制补学文档检索。
