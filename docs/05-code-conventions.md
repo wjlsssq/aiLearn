@@ -89,3 +89,6 @@ uv run --locked python -m pytest tests -q
 Python 保持四空格缩进。教学注释继续解释实际语句、输入输出和事务边界；复杂表达式拆行，避免多个操作挤在一行。
 
 `npm install` 必须在 E 盘实际依赖目录中运行，安装或升级后把 package.json 和 package-lock.json 同步回前端源码目录；重装依赖使用 `scripts/install_frontend.ps1`。`.idea` 属于本机配置，不进入版本库。
+
+
+Q06 草稿模块：`schemas/draft.py` 定义字段与报告，`ai/prompts/draft.py` 生成提取消息，`ai/models/draft.py` 处理供应商结构化调用，`services/draft.py` 做来源与缺失项判断，`api/routes/draft.py` 提供认证接口；前端对应 `DraftLab.vue`、`useDraftLab.ts`、`api/draft.ts`、`types/draft.ts`。本阶段不持久化，不为草稿创建空 Repository 或数据库表。

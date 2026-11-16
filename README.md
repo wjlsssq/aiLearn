@@ -12,6 +12,8 @@
 
 ## 计划入口
 
+- [Q06：结构化售后草稿](docs/lessons/Q06-structured-output.md)：JSON mode、Pydantic 严格校验、缺失追问与失败边界。
+
 - [Q05：流式输出与取消](docs/lessons/Q05-streaming-cancellation.md)：首段/结束耗时、协议、断点和失败实验。
 
 - [双电脑交接与当前待办](docs/07-handoff.md)：每次修改前先拉取、阅读；完成后更新并随代码提交推送。

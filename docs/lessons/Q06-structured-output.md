@@ -1,0 +1,79 @@
+# Q06：如何让 LLM 稳定返回结构化数据？
+
+场景：用户描述“订单 DEMO-A001 的耳机左耳无声，我想换货，数量 1 件”，ShopMind 把它整理成待核对的售后草稿。这里学习结构化提取，不创建工单，不读取订单与历史。
+
+## 1. 从页面体验
+
+重新在 IDEA Debug `backend/run.py`，刷新工作台，打开“售后草稿”。真实模式点击提取会发送一次模型请求，可能产生费用。
+
+1. 使用完整描述，观察订单号、问题类型、原因、数量四个字段和校验后的 JSON。
+2. 改为“我的耳机坏了，想退货”，订单号与数量应为 null，页面提示补充；未知不等于校验失败。
+3. 改为“想咨询售后”，问题类型应为 unknown，不强行猜测退货或换货。
+4. 模拟模式返回固定空字段样例，明确标记，不声称做了智能提取。需要观察真实效果时保持 `CHAT_MODE=llm` 与有效模型配置。
+
+表单是只读提取结果，修改上方描述再提取。没有“确认创建”按钮；业务授权与幂等建单留到后续模块。刷新后草稿消失是本课设计，不保存聊天或工单。
+
+## 2. 先区分三层正确性
+
+| 层次 | 示例 | 由谁保证 |
+| --- | --- | --- |
+| JSON 语法 | 双引号、数组、对象等语法合法 | JSON mode 辅助约束，仍需解析和异常处理 |
+| Schema 契约 | 数量必须是整数 1～99，类型属于枚举，不允许额外字段 | Pydantic 严格校验 |
+| 业务可执行 | 订单属于当前用户、数量不超过购买量、符合售后期限 | 后续服务端数据库查询、业务规则和用户确认 |
+
+`{"quantity":"1"}` 可以是合法 JSON，但不通过本课严格整数校验。`{"order_no":"别人的订单号", ...}` 即使字段合法也不代表授权。模型生成的文字不是执行权限。
+
+Java 对照：Pydantic 类类似 DTO + Bean Validation；但校验一个 DTO 合法，不等于 Service 的资格校验通过，更不等于已经执行事务。
+
+## 3. 本课为何选 JSON mode？
+
+DeepSeek 官方 JSON Output 支持 `response_format={"type":"json_object"}`。本课显式使用 `with_structured_output(AfterSalesDraft, method="json_mode", include_raw=True)`，复用已有模型工厂。不要把兼容 OpenAI 协议理解为所有供应商都支持同样的原生 JSON Schema 强约束。
+
+JSON mode 还需要在消息中明确写 JSON 要求和目标 schema；它并不能保证填齐字段或枚举正确。返回后 LangChain 解析器按 Pydantic 类校验。`include_raw` 的结果中有 raw、parsed、parsing_error：成功时读取 parsed；解析失败不给页面一个默认成功对象，也不回显原始响应和异常正文。
+
+其他策略：供应商原生 schema 可约束输出形状，但支持范围取决于服务和模型；工具策略通过工具参数承载结构，这与真正执行工具仍是两件事。先理解三者，再按供应商能力选用。本项目没有静默切换策略或自动修复重试，失败就明确显示。
+
+## 4. 顺着调用链逐行调试
+
+```text
+DraftLab.vue → useDraftLab.ts → api/draft.ts
+  → POST /api/drafts/extract（认证 + DraftInput）
+  → services/draft.make_draft
+  → ai/models/draft.extract_draft
+  → with_structured_output → invoke → parsed
+  → 来源检查 + 计算缺失项 → DraftReport → 表单
+```
+
+1. `schemas/draft.py`：四个提取字段必须存在，未提供时使用显式 null；nullable 与可省略不是一回事。`extra="forbid"` 拒绝额外字段，`strict=True` 拒绝把字符串或布尔值隐式转换为数量。
+2. `ai/prompts/draft.py`：从同一个 Pydantic 类生成 JSON Schema，减少手写 schema 与实际校验器漂移。用户描述独立放入 human，不能充当 system；这不是完整的注入防御或事实验证。
+3. `ai/models/draft.py`：断在 `structured.invoke`，观察 Runnable 输入；下一步查看 raw 的结束原因、parsed 的 Python 类型及 parsing_error。raw 只在本机调试查看，不返回浏览器或落日志。
+4. 同一函数处理 SDK 直接抛出的 LengthFinishReasonError / ContentFilterFinishReasonError。它们可能发生在 raw 字典返回前，不能只写“检查 parsing_error”。401/429 等复用已有安全错误边界。
+5. `services/draft.py`：订单号必须出现在描述中，否则报告无可用草稿；这只是保守的来源检查，不证明订单存在。missing_fields 由服务端计算，不让模型自己宣称“所有字段齐全”。
+6. `useDraftLab.ts`：请求中禁用描述编辑；身份变化后清除旧结果，拒收旧响应。模型调用不影响普通聊天的 Q04 历史与 Q05 流式协议。
+
+Schema 版本当前为 1.0.0；新增字段时同时更新 Python 模型、提示 schema、TypeScript 类型、表单和回归案例，并考虑版本兼容。
+
+## 5. 失败与测试实验
+
+自动化使用真实 ChatDeepSeek / ChatOpenAI 适配器和内存 HTTP 响应，不发起付费请求。覆盖正确 JSON、缺字段、非法枚举、字符串数量、布尔数量、数量越界、额外字段、编造订单号、截断、内容过滤、认证与参数限制。每次只允许一条请求，不隐式发起模型修复。
+
+在 `tests/test_draft.py` 找到 GOOD，手动将 quantity 改成字符串，解释为何 JSON 合法却不能生成草稿。再将 order_no 改成原文没有的合法编号，观察 Service 来源检查与 schema 检查的差异。
+
+真实模型并不保证每次语义都正确：原因概括可能偏离原文，类型可能误判，数量也可能识别错误。当前需要用户逐项核对；没有把 schema 通过当成事实正确，尚未检索订单或规则。原文订单号的大小写若被模型改写，本课会保守拒绝，用户应明确原文后重试。
+
+## 6. 面试卡
+
+**30 秒回答**：我用 Pydantic 定义售后草稿字段，通过 LangChain 的 JSON mode 获取结构化响应，再执行严格校验和来源检查。缺失字段用 null 触发澄清，解析失败不输出默认草稿，供应商故障单独处理。Schema 合法不代表业务授权，真正建单还需要订单归属、规则校验、用户确认与幂等事务。
+
+| 追问 | 回答要点 |
+| --- | --- |
+| 为什么不能只写“返回 JSON”？ | 没有字段、类型、范围、失败契约，业务代码仍无法信任输出。 |
+| null 和缺字段有什么区别？ | 本课要求字段显式存在，null 表示未知；缺键是契约不合格。 |
+| 是否需要自动重试？ | 不盲目重试；需限制次数、费用和副作用。本课不隐藏第二次请求。 |
+| include_raw 会吞掉所有错误吗？ | 不会，网络、认证和 SDK 截断异常仍可能抛出。 |
+| 结构化结果能直接作为工具参数吗？ | 只能作为候选数据，执行前必须经过服务端授权与业务校验。 |
+| 如何减少幻觉？ | 允许未知、保留来源、校验并人工核对；格式约束不等于事实保证。 |
+
+完成后进入 Q07：RAG 为什么需要检索与引用，先将店铺规则变成可追溯的知识。
+
+官方依据：[DeepSeek JSON Output](https://api-docs.deepseek.com/guides/json_mode/)、[LangChain 模型结构化输出](https://docs.langchain.com/oss/python/langchain/models#structured-output)、[with_structured_output](https://reference.langchain.com/python/langchain-openai/chat_models/base/BaseChatOpenAI/with_structured_output)。运行行为以 uv.lock 和本项目适配器测试为准。

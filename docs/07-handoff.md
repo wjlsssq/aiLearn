@@ -74,7 +74,7 @@ git log -3 --oneline
 
 ## 5. 代码入口与下一步
 
-当前课程已进入 [Q05 流式与取消](lessons/Q05-streaming-cancellation.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
+当前课程已进入 [Q06 结构化输出](lessons/Q06-structured-output.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
 
 1. 页面打开“流水线实验”，先预览带首尾空白的问题，展开 normalize / prompt 看实际字典、消息与类型；不调用模型。
 2. 切换 batch 预览两题，再按需运行。llm 模式运行两题发起两次真实模型请求，可能产生费用；实验面板整次返回步骤，普通聊天仍保持真实增量。
@@ -186,3 +186,14 @@ npm.cmd run dev -- --port 5173 --strictPort
 - 验证：52 项 pytest 通过（含真实 MySQL 与原有上下文/流式回归）、5 项前端计时/SSE 测试通过、Prettier 与 TypeScript/Vite 构建通过；真实供应商取消和费用行为未实测，不承诺停止即撤销费用或网络断线下 exactly-once。
 - 本机原有 Q02 讲义改动和 docs/面试.md 继续保留，不混入功能提交。
 - 下一步：先读 docs/lessons/Q05-streaming-cancellation.md 并完成首段/完成/取消实验；理解后进入 Q06 结构化输出。当前仍有原 Element Plus 包体提示。
+
+
+### Q06 实现与学习交接（2026-11-16）
+
+- 用户看完 Q05 要求下一阶段，新增独立“售后草稿”面板和受认证保护 POST /api/drafts/extract。用户描述只用于本次提取，不读历史、不查订单、不写表、不创建工单。
+- Pydantic 严格 schema 定义 order_no / issue_type / reason / quantity；字段必填但允许明确 null，拒绝额外字段、隐式类型、非法枚举和数量范围错误。JSON mode 显式传 schema 指令，include_raw 解析失败不给可用草稿；SDK 可能提前抛出的 length/filter 异常单独安全处理。不返回原始响应、不自动修复或重试。
+- Service 另检查订单号在原文中出现并计算缺失字段；不声称该检查证明订单归属、语义事实或售后资格。面板只读展示待核对结果，编辑原描述重新提取。模拟模式返回明确固定空样例；Schema 版本 1.0.0。
+- 沿现有架构新增 draft 的 API / Schema / Service / AI 消息与调用模块，前端新增组件 / composable / API / 类型；不添加依赖与数据库字段。核心注释和讲义见 docs/lessons/Q06-structured-output.md。
+- 先执行 git pull：直连被重置，发现当前系统代理是 127.0.0.1:7897 后单次指定代理成功，无远端更新；没有修改共享 Git 配置。后续网络问题先检查系统实际代理，不套旧 7892。
+- 验证：69 项 pytest 通过（含真实 MySQL、原流式/上下文与 Q06 两种适配器内存 HTTP）、5 项前端计时/SSE 测试通过，Prettier / TypeScript / Vite 构建通过，仍有原 Element Plus 包体提示。真实 DeepSeek 提取效果仍待用户配置并体验，本次协议测试不调用付费服务，未操作用户 IDEA 或 8000 进程。
+- 原有 Q02 讲义改动和 docs/面试.md 保留且不混入提交。下一步由用户重新 Debug 后打开售后草稿，按 Q06 讲义实验完整描述、缺订单号、unknown 类型与字段校验，再进入 Q07 RAG。

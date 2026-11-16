@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { reactive } from 'vue'
+import DraftLab from '../components/workbench/DraftLab.vue'
+import { useDraftLab } from '../composables/useDraftLab'
 import SessionSidebar from '../components/workbench/SessionSidebar.vue' // 会话导航。
 import LoginForm from '../components/workbench/LoginForm.vue' // 登录表单。
 import ChatPanel from '../components/workbench/ChatPanel.vue' // 对话展示与输入。
@@ -40,6 +43,7 @@ const {
   previewPrompt,
 } = useWorkbench() // 页面仅组合组件和绑定状态。
 const lab = useChainLab(token, logout)
+const draftLab = reactive(useDraftLab(token, logout)) // 展示组件与提取业务状态分离。
 // 解构 ref 供模板自动解包，避免组件接收到 Ref 对象。
 const {
   visible: chainVisible,
@@ -109,6 +113,15 @@ const {
           @retry="retry"
         >
           <template #settings>
+            <DraftLab
+              v-model:visible="draftLab.visible"
+              v-model:description="draftLab.description"
+              :busy="draftLab.busy"
+              :mode="chatMode"
+              :report="draftLab.report"
+              :error="draftLab.error"
+              @run="draftLab.run"
+            />
             <PromptPanel
               v-model:store-name="storeName"
               v-model:style="promptStyle"
