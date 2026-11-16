@@ -1,4 +1,4 @@
-# ShopMind · AI 服务工作空间
+# 智能客服工作空间
 
 将会话、订单与服务资料放在同一工作台，面向实际售后服务流程持续构建 Agent 应用。
 
@@ -14,7 +14,7 @@
 
 ## 开始运行
 
-Python 3.12、虚拟环境、缓存与前端依赖统一位于 E 盘。新电脑先按 [环境恢复](docs/00-environment.md) 创建目录联接；每次修改前先拉取代码并读 [项目约定](AGENTS.md)、[交接文档](docs/07-handoff.md)。
+Python 3.12、虚拟环境、缓存与前端依赖统一位于 E 盘。新电脑先按 [环境恢复](docs/00-环境准备.md) 创建目录联接；每次修改前先拉取代码并读 [项目约定](AGENTS.md)、[交接文档](docs/07-双电脑开发交接.md)。
 
 ```powershell
 uv sync --locked
@@ -32,7 +32,7 @@ uv run --locked python backend/run.py
 
 `init_db` 是本地开发种子脚本，包含合成账号及订单，不作为生产开户方式。已有示例数据原样保留并保留其模拟标识；数据库实时变化不会随 Git 自动同步。用户要求的[全量 SQL 快照](database/README.md)已随代码保存，另一台电脑可以手动恢复完整结构和数据，无需重新生成同一批样本。
 
-需要批量业务样本时，执行 `uv run --locked python -X utf8 -m scripts.seed_business_data --apply`，默认追加 1,000 个用户与 20,000 笔订单，相同参数可重复运行且不会覆盖已有记录。账号、分布和自定义数量见 [本地业务数据](docs/10-business-data.md)。
+需要批量业务样本时，执行 `uv run --locked python -X utf8 -m scripts.seed_business_data --apply`，默认追加 1,000 个用户与 20,000 笔订单，相同参数可重复运行且不会覆盖已有记录。账号、分布和自定义数量见 [本地业务数据](docs/10-本地业务样本数据.md)。
 
 ## 目录与验证
 
@@ -47,9 +47,9 @@ node --test tests/*.test.mjs
 npm.cmd run build
 ```
 
-- [产品设计与调研](docs/09-product-workspace.md)：页面结构、参考来源、清理范围与能力边界。
-- [代码架构](docs/05-code-conventions.md)、[启动说明](docs/04-running.md)、[IDEA 调试](docs/06-idea-debugging.md)。
-- [双电脑交接](docs/07-handoff.md)：当前状态、验证和下一步。
+- [产品设计与调研](docs/09-产品工作台设计与调研.md)：页面结构、参考来源、清理范围与能力边界。
+- [代码架构](docs/05-代码架构与开发规范.md)、[启动说明](docs/04-项目启动与业务验收.md)、[IDEA 调试](docs/06-启动与断点调试.md)。
+- [双电脑交接](docs/07-双电脑开发交接.md)：当前状态、验证和下一步。
 
 ## 研发资料
 
