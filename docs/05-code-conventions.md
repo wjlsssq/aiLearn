@@ -20,12 +20,13 @@ API 只适配 HTTP，Service 决定身份、业务规则与事务，Repository �
 
 - `api/routes/auth.py`：login / me / logout；退出只撤销当前令牌。
 - `api/routes/assistant.py`：面向产品的订单助手，结果不暴露工具 schema 或轨迹。
-- `services/assistant.py` 转换业务响应；`services/tool_calling.py` 保留白名单、预算和严格参数校验。
+- `services/assistant.py` 直接组织业务响应，保留工具白名单、预算和严格参数校验，不再包装实验轨迹服务。
 - `ai/tools/order.py` 接收服务层注入的查询回调，工具参数中不包含 user_id。Repository 查询必须同时限定用户与订单编号。
 - `services/chat.py` 管理会话归属和成对写入；AI 网关只处理模型协议，数据库事务不跨模型等待。
 - `services/draft.py` 保留字段与来源检查，草稿不等于工单；服务未启用时不返回固定演示结果。
 - `services/knowledge.py` 管理私有文档与版本，切分由 ai/rag/splitter.py 内部完成；接口不再提供教学样例或分块 A/B 预览。
 - 新表与改表经 `backend/migrations` / `backend/alembic.ini` 管理，原五张表仅保留初始化基线。
+- `scripts/seed_business_data.py` 只用于本地开发样本追加，默认预览；批量用户和订单在同一事务写入，不作为 HTTP 产品接口，运行数据和凭据仅存忽略目录。用法见 [业务数据](10-business-data.md)。
 
 ## 验证与交接
 

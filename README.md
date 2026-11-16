@@ -32,6 +32,8 @@ uv run --locked python backend/run.py
 
 `init_db` 是本地开发种子脚本，包含合成账号及订单，不作为生产开户方式。已有示例数据原样保留并保留其模拟标识；业务数据不会随 Git 同步。
 
+需要批量业务样本时，执行 `uv run --locked python -X utf8 -m scripts.seed_business_data --apply`，默认追加 1,000 个用户与 20,000 笔订单，相同参数可重复运行且不会覆盖已有记录。账号、分布和自定义数量见 [本地业务数据](docs/10-business-data.md)。
+
 ## 目录与验证
 
 后端遵循 API → Service → Repository → ORM/DB；AI 适配和工具放 `backend/app/ai`。前端页面组合在 views，组件按业务域划分，操作流程在 composables，HTTP 与 DTO 分别在 api/types。样式按主题、外壳、会话、资源、登录拆分。
