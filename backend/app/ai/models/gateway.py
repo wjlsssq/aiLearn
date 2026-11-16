@@ -82,13 +82,13 @@ async def stream_reply(
             await asyncio.sleep(0)  # 保持取消和其他请求可以被处理。
         return
     has_text = False  # 元数据块或空白块不能单独构成有效回答。
-    finished = False  # 供应商结束标记与网络 EOF 不同，截断流不能当完整回答保存。
+    finish_reason = None  # 正常结束、长度截断和内容过滤不是同一种成功。
     with safe_model_call():
         model = create_chat_model()  # 仍使用现有供应商工厂和 Prompt。
         async with aclosing(model.astream(messages)) as chunks:
             async for chunk in chunks:  # 等待模型真实返回下一块，尚未等待整段完成。
-                finished = finished or bool(
-                    chunk.response_metadata.get("finish_reason")
+                finish_reason = (
+                    chunk.response_metadata.get("finish_reason") or finish_reason
                 )
                 text = chunk.text
                 if text:  # 忽略无正文的元数据，保留文本块中的空格与换行。
@@ -96,7 +96,11 @@ async def stream_reply(
                     yield text
     if not has_text:
         raise BusinessError(502, "模型未返回有效文本，请检查模型能力或稍后重试")
-    if not finished:
+    if finish_reason == "length":
+        raise BusinessError(
+            502, "模型输出达到长度上限，回答未完整生成，请缩短问题或调整输出预算"
+        )
+    if finish_reason != "stop":  # 本模块是纯文本聊天，其他结束原因不能确认完整成功。
         raise BusinessError(502, "模型连接提前结束，请稍后重试")
 
 

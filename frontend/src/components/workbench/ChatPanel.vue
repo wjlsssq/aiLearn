@@ -77,7 +77,7 @@ watch(
       >
         <div class="spark">✦</div>
         <h2>你好，有什么可以帮你？</h2>
-        <p>Q04：先告诉我喜欢的颜色，再问“我喜欢什么颜色？”，观察多轮上下文。</p>
+        <p>Q05：观察首段正文与完成耗时，尝试停止生成并检查保存状态。</p>
         <el-button
           :disabled="busy"
           @click="input = '你能帮助我做哪些事情？'"
@@ -141,6 +141,22 @@ watch(
             {{ message.status === 'stopped' ? '重新生成' : '重试' }}
           </el-button>
         </div>
+        <p
+          v-if="message.role === 'assistant' && message.metrics"
+          class="message-state"
+          aria-label="本次流式观测"
+        >
+          首段正文：{{
+            message.metrics.firstTextMs === null
+              ? '未收到'
+              : `${Math.round(message.metrics.firstTextMs)} ms`
+          }}
+          · {{ message.status === 'complete' ? '完成' : '结束' }}耗时：{{
+            message.metrics.endMs === null ? '进行中' : `${Math.round(message.metrics.endMs)} ms`
+          }}
+          · {{ message.metrics.textChunks }} 个文本块（非 token 数） ·
+          {{ message.status === 'complete' ? '已确认保存' : '未确认保存' }}
+        </p>
         <span
           v-if="message.role === 'user' && message.status === 'pending'"
           class="message-state"

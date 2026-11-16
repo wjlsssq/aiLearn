@@ -74,7 +74,7 @@ git log -3 --oneline
 
 ## 5. 代码入口与下一步
 
-当前课程已进入 [Q04 多轮上下文](lessons/Q04-conversation-history.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
+当前课程已进入 [Q05 流式与取消](lessons/Q05-streaming-cancellation.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
 
 1. 页面打开“流水线实验”，先预览带首尾空白的问题，展开 normalize / prompt 看实际字典、消息与类型；不调用模型。
 2. 切换 batch 预览两题，再按需运行。llm 模式运行两题发起两次真实模型请求，可能产生费用；实验面板整次返回步骤，普通聊天仍保持真实增量。
@@ -175,3 +175,14 @@ npm.cmd run dev -- --port 5173 --strictPort
 - 验证：pytest 48 项通过（含真实 MySQL 与旧流式回归），前端 Prettier / TypeScript / Vite 构建通过，仍有原有包体提示；最终模板版本更新后再次回归 48 项通过，60 个 Python 文件格式检查通过，3 项 Node SSE 测试通过。
 - 开工时已有用户改动 docs/lessons/Q02-prompt-messages.md 和未跟踪 docs/面试.md，原样保留，不混入本次功能提交。不要清理或覆盖。
 - 下一步：按 Q04 讲义打断点观察 history 和 messages，确认理解持久化与上下文区别；Q05 流式基础已提前实现，可在本课后专题学习结束标记、取消与事务边界。未操作用户 IDEA 或 8000 服务。
+
+
+### Q05 实现与学习交接（2026-11-16）
+
+- 用户要求 Q04 后下一阶段，进入 Q05 流式专题；基础能力已提前实现，本次补上每次请求的首段正文耗时、完成/结束耗时、文本块数与保存状态，以及独立课程讲义。
+- 新增 frontend/src/utils/stream-metrics.ts，使用 performance.now 单调时钟。只计非空正文块，不把 start 当首字；done 后不累计会话列表刷新，失败/停止也结束测量；重试重置，历史恢复不伪造旧指标。数据仅留当前页面，无新增依赖或数据库字段。
+- 修正网关结束判定：纯文本流只认可 finish_reason=stop，length 输出截断及 content_filter 不保存成完整成功问答；保留部分显示，继续使用 error 事件。两种真实适配器均有内存协议测试，没有付费请求。
+- 本次保留 Q04 历史、旧 SSE 协议、认证与归属、取消及事务边界；没有操作用户 IDEA 后台服务。用户重新 Debug 后可按 Q05 讲义观察真实首段/完成耗时、停止并核对数据库。断点等待会影响测量。
+- 验证：52 项 pytest 通过（含真实 MySQL 与原有上下文/流式回归）、5 项前端计时/SSE 测试通过、Prettier 与 TypeScript/Vite 构建通过；真实供应商取消和费用行为未实测，不承诺停止即撤销费用或网络断线下 exactly-once。
+- 本机原有 Q02 讲义改动和 docs/面试.md 继续保留，不混入功能提交。
+- 下一步：先读 docs/lessons/Q05-streaming-cancellation.md 并完成首段/完成/取消实验；理解后进入 Q06 结构化输出。当前仍有原 Element Plus 包体提示。

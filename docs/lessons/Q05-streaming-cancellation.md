@@ -1,0 +1,80 @@
+# Q05：流式响应如何实现，客户端中断后怎么办？
+
+本课场景：ShopMind 逐步显示回答，用户能停止生成，并看到本次请求首段正文、结束耗时、文本块数及保存状态。已有 Q04 上下文继续生效。流式不代表模型生成更快，它主要减少等待整段回答才显示的时间。
+
+## 1. 先体验三个状态
+
+由用户停止旧 IDEA Debug，再重新 Debug `backend/run.py`，刷新前端。
+
+1. 发送“请分五步说明怎样整理售后沟通材料”，观察用户消息立即出现，再逐步出现助手正文。真实模型效果需自己的有效配置；mock 只是明确标识的固定文本分块。
+2. 查看气泡下的首段正文耗时和文本块数；只有收到 done 后，才出现“已确认保存”。
+3. 生成过程中点停止：保留部分文本，显示结束耗时和“未确认保存”。重新打开该会话，看数据库是否只有完整成功问答。模型太快时可能已完成，不能把已经提交的问答当作取消成功。
+4. 点最后一个失败气泡的重试：原位重用气泡，耗时重置，不重复追加用户消息；下一条草稿保持。
+
+耗时只在当前页面存在，刷新恢复的历史消息不伪造耗时。指标是浏览器从发起请求到收到事件的观察值，包含网络、服务端、模型等待；不是供应商纯推理时间，也不是实际屏幕绘制耗时。
+
+## 2. 一条消息经过哪些层？
+
+```text
+send → runTurn → streamMessage → fetch + reader
+  → POST /api/chat/stream → 认证 / 归属 / 历史快照
+  → stream_message → gateway.stream_reply → model.astream(messages)
+  → AIMessageChunk → SSE delta → 解码 / 解析 → 气泡追加
+  → 正常 stop → persist_stream 提交 MySQL → SSE done
+```
+
+Java 对照：同步 invoke 像等待一个返回值；异步迭代像订阅一串可逐次消费的元素。Python async 是协作式等待，不会自动让 CPU 运算更快。流式生成器 `yield` 把当前块交给下游，下一次迭代才继续等待。
+
+## 3. 按行读代码与断点
+
+1. `backend/app/ai/models/gateway.py`：`model.astream(messages)` 创建异步流；`async for chunk` 逐块消费；`chunk.text` 是增量正文，不是完整答案，也不保证一块一个 token。
+2. 同一函数的 `finish_reason`：必须以本课支持的正常 `stop` 结束；`length` 表示达到输出上限，已有正文也可能不完整；`content_filter`、其他原因或只有网络 EOF 不能确认成功。错误仍允许页面保留已显示的部分。
+3. `backend/app/services/chat.py`：`yield "delta"` 立即转交；只有上游完整结束且正文有效才进入 `persist_stream`。数据库提交完成后才 `yield "done"`。
+4. `backend/app/api/routes/chat.py`：SSE 每个事件以空行分隔，JSON 转义正文，避免换行破坏协议；响应头先于事件发出。
+5. `frontend/src/api/client.ts` 和 `utils/sse.ts`：reader 得到网络字节；TextDecoder 跨块恢复 UTF-8；解析器跨块恢复 SSE 帧。一个网络块可能只有半个汉字，也可能包含多个事件。
+6. `frontend/src/composables/useWorkbench.ts`：`runTurn` 创建 AbortController，delta 追加正文，done 才更新保存状态；停止、切换与退出取消读取，conversationVersion 防止旧事件串入新会话。
+7. `frontend/src/utils/stream-metrics.ts`：每次调用捕获 `startedAt`；首个非空 delta 记录 firstTextMs；end 只记录一次。`performance.now()` 是单调时钟，不用系统墙上时间相减。
+
+不要长时间在每个 token 块上暂停调试，否则浏览器可能超时，计时值也会包含人为断点等待。先观察一次对象，再连续运行看正常耗时。
+
+## 4. 四个协议事件
+
+| 事件 | 表示什么 | 不代表什么 |
+| --- | --- | --- |
+| start | 业务流已建立 | 不代表首字或持久化成功 |
+| delta | 新正文块，立即追加 | 不保证是一个 token 或完整句子 |
+| done | 完整生成且数据库提交成功 | 不代表所有客户端都必然收到它 |
+| error | 流内失败，包含安全错误 | HTTP 200 不等于业务成功 |
+
+身份和参数错误在响应头前返回 HTTP 401/404/422。响应头发出后不能再改成 HTTP 502，因此用 error 事件表达业务失败。前端还需验证 done；网络连接关闭不是成功标志。
+
+## 5. 取消如何向上传递？
+
+浏览器 AbortController → fetch 读取取消 → 响应消费者退出 → 服务端异步生成器关闭 → aclosing 清理模型流。本项目没有在取消异常时写入部分问答。
+
+但取消不能撤销已发生的推理与费用，也不能回滚已经完成的数据库提交。存在“提交成功但 done 丢失”的窗口：先重新打开会话核对，再手动重试。本课没有持久化幂等键，不承诺任意断线下只执行一次。
+
+## 6. 面试回答与追问
+
+**30 秒回答**：后端通过模型 astream 消费增量，用 SSE start/delta/done/error 向前端交付。前端 fetch 流式解码并跨块解析事件，AbortController 支持取消。只有完整正常结束并提交数据库后才发 done；EOF、截断和 HTTP 200 都不能单独证明业务成功。
+
+| 追问 | 本项目回答 |
+| --- | --- |
+| 为什么不是 EventSource？ | 当前请求使用 POST 请求体与 Bearer，使用 fetch 读 SSE；原生 EventSource 的构造方式不适合当前契约。 |
+| 为什么不选 WebSocket？ | 当前是一问一答的下行流，HTTP 足够；持续双向低延迟交互再考虑 WebSocket。 |
+| 为什么生产上整段出现？ | 检查模型是否真流式、反向代理或压缩是否缓冲，以及前端是否等完整 body；不是加打字动画解决。 |
+| 首段快就表示总耗时短吗？ | 不一定；本课分别计时，首段不包含后续生成与保存。 |
+| 文本块数能算 token 成本吗？ | 不能；网络、协议与模型分词是不同边界，成本需供应商 usage 等可靠数据。 |
+| 断开了能自动重试吗？ | 不能盲目重试，存在已保存但未确认的窗口，需要核对或设计幂等协议。 |
+
+## 7. 练习与验收
+
+- 用浏览器网络工具比较 start、首段 delta 与 done 的到达顺序。工具或代理本身可能影响时序；本课不编造性能数据。
+- 停止一次尚在生成的请求，核对部分文本未入库；模拟失败时没有 done。
+- 使用测试中的可控时钟解释为什么 30 ms 首段、100 ms 完成、两块文本仍不能说明供应商生成了两个 token。
+- 将 `LLM_MAX_TOKENS` 临时调小并重启后端，观察真实模型若返回 length 时的失败提示；会产生一次真实请求，完成实验后恢复原配置。自动化用内存响应验证该分支，不付费。
+- 学会后再进入 Q06：结构化输出与 Pydantic 校验，不在本课混入结构化售后草稿。
+
+自动化：根目录 `uv run --locked python -m pytest tests -q`；前端目录 `node --test tests/*.test.mjs`、`npm.cmd run format:check`、`npm.cmd run build`。
+
+官方依据：[LangChain 模型流式接口](https://docs.langchain.com/oss/python/langchain/models)、[单调计时 performance.now](https://developer.mozilla.org/en-US/docs/Web/API/Performance/now)。完整协议与运行说明见 [流式交互文档](../08-streaming-chat.md)。

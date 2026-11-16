@@ -1,4 +1,5 @@
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue' // 响应式状态与请求生命周期。
+import { createStreamMeter } from '../utils/stream-metrics' // Q05：每次尝试独立计时。
 import { ElMessage } from 'element-plus' // 展示业务操作失败提示。
 import { ApiError } from '../api/client' // 根据状态码恢复登录页面。
 import { login as loginRequest } from '../api/auth' // 登录请求。
@@ -160,6 +161,8 @@ export function useWorkbench() {
     turn.assistant.content = ''
     turn.assistant.error = undefined
     let saved = false
+    const meter = createStreamMeter() // 在 HTTP 请求开始前计时，包括网络和服务端等待。
+    turn.assistant.metrics = { ...meter.metrics } // 重试时重置，避免沿用上次数据。
     try {
       await streamMessage(
         turn.question,
@@ -172,10 +175,14 @@ export function useWorkbench() {
             chatMode.value = event.data.mode
             modelName.value = event.data.model
           } else if (event.event === 'delta') {
+            meter.text(event.data.text) // 只计正文事件，start 不代表首字。
+            turn.assistant.metrics = { ...meter.metrics } // 快照触发响应式更新。
             turn.assistant.status = 'streaming'
             turn.assistant.content += event.data.text // 每收到一块就显示，不在前端模拟打字。
           } else {
             saved = true // done 表示模型结束且数据库提交成功。
+            meter.end() // 完成耗时截至收到 done，不包括后续会话列表刷新。
+            turn.assistant.metrics = { ...meter.metrics }
             sessionId.value = event.data.session_id
             lastPromptVersion.value = event.data.prompt_version
             turn.assistant.content = event.data.reply // 与最终入库正文保持一致。
@@ -197,6 +204,8 @@ export function useWorkbench() {
         if (error instanceof ApiError && error.status === 401) reportError(error)
       }
     } finally {
+      meter.end() // 失败或取消也记录本次结束时间，保留无首字的 null。
+      turn.assistant.metrics = { ...meter.metrics }
       if (controller === requestController) {
         controller = null
         sending.value = false

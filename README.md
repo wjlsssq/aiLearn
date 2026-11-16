@@ -12,6 +12,8 @@
 
 ## 计划入口
 
+- [Q05：流式输出与取消](docs/lessons/Q05-streaming-cancellation.md)：首段/结束耗时、协议、断点和失败实验。
+
 - [双电脑交接与当前待办](docs/07-handoff.md)：每次修改前先拉取、阅读；完成后更新并随代码提交推送。
 - [Q01：模型调用与 LangChain 的作用](docs/lessons/Q01-langchain-models.md)：DeepSeek 配置、断点、SDK 对照与面试练习。
 - [Q02：Prompt 与消息角色](docs/lessons/Q02-prompt-messages.md)：店铺变量、风格切换、消息预览、模板版本和断点练习。

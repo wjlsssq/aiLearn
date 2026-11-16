@@ -320,3 +320,41 @@ def test_truncated_model_stream_is_not_success(model_config, monkeypatch, broken
         asyncio.run(collect())
     assert caught.value.status_code == 502
     assert "private-stream-reset" not in caught.value.message
+
+
+@pytest.mark.parametrize("provider", ["openai_compatible", "deepseek"])
+@pytest.mark.parametrize("reason", ["length", "content_filter"])
+def test_abnormal_finish_is_not_a_success(model_config, monkeypatch, provider, reason):
+    """即使收到正文与 DONE，异常结束也不能被标记为完整回答。"""
+    monkeypatch.setattr(settings, "llm_provider", provider)
+    adapter = factory.ChatDeepSeek if provider == "deepseek" else factory.ChatOpenAI
+    frame = {
+        "id": "truncated",
+        "object": "chat.completion.chunk",
+        "created": 0,
+        "model": "test-chat-model",
+        "choices": [
+            {"index": 0, "delta": {"content": "部分回答"}, "finish_reason": reason}
+        ],
+    }
+
+    async def handle(request):
+        payload = "data: " + json.dumps(frame) + "\n\ndata: [DONE]\n\n"
+        return httpx.Response(
+            200, headers={"content-type": "text/event-stream"}, content=payload.encode()
+        )
+
+    async def collect():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+            name = "ChatDeepSeek" if provider == "deepseek" else "ChatOpenAI"
+            monkeypatch.setattr(
+                factory,
+                name,
+                lambda **options: adapter(**options, http_async_client=client),
+            )
+            with pytest.raises(BusinessError) as caught:
+                async for _ in gateway.stream_reply("结束原因实验"):
+                    pass
+            assert caught.value.status_code == 502
+
+    asyncio.run(collect())
