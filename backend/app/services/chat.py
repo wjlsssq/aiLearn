@@ -1,5 +1,8 @@
 """会话归属、消息校验和问答事务。"""
 
+from langchain_core.messages import BaseMessage  # 请求内历史快照。
+from ..ai.prompts.history import MAX_HISTORY_ROUNDS, select_history  # 有界上下文。
+
 from sqlalchemy.orm import Session  # 当前业务事务。
 from collections.abc import AsyncIterator  # 流式事件按需交付。
 from contextlib import aclosing  # 断开时关闭模型生成器。
@@ -52,6 +55,17 @@ def list_messages(
     ]  # 返回稳定数据契约。
 
 
+def load_history(
+    db: Session, session_id: int | None, user_id: int
+) -> list[BaseMessage]:
+    """先授权再读取；绝不接受客户端伪造的 assistant 或 system 历史。"""
+    if session_id is None:
+        return []  # 新会话不继承其他会话。
+    require_session(db, session_id, user_id)  # 越权必须先于历史读取与模型请求。
+    rows = repository.recent_messages(db, session_id, MAX_HISTORY_ROUNDS * 2)
+    return select_history(rows)  # 数据库保留全量，模型只获得预算内完整问答。
+
+
 def send_message(
     db: Session, user_id: int, body: ChatInput
 ) -> ChatResponse:  # 一个问答对应一个数据库事务。
@@ -60,7 +74,11 @@ def send_message(
         raise BusinessError(422, "消息不能为空")  # 空白内容不会写入数据库。
     if body.session_id is not None:  # 先授权，防止为越权请求发起收费模型调用。
         require_session(db, body.session_id, user_id)  # 当前用户不能使用其他人的会话。
+    history = load_history(db, body.session_id, user_id)  # 已成功提交的历史快照。
+    db.rollback()  # 生成期间释放只读连接；后续重新授权并写入。
     prompt_options = body.prompt.model_dump() if body.prompt is not None else {}
+    if history:
+        prompt_options["history"] = history  # 空历史保持旧调用兼容。
     result = generate_reply(
         content, **prompt_options
     )  # 先取得有效回复，再开始新增记录，避免失败留下空会话。
@@ -88,6 +106,7 @@ class PreparedChat:
     user_id: int  # 服务端认证身份，不从用户消息推断。
     body: ChatInput  # 已通过 DTO 校验的本次请求快照。
     content: str  # 去掉首尾空白的问题。
+    history: list[BaseMessage]  # 生成前的历史快照，不持有 ORM 或数据库连接。
 
 
 def prepare_stream(db: Session, user_id: int, body: ChatInput) -> PreparedChat:
@@ -97,7 +116,12 @@ def prepare_stream(db: Session, user_id: int, body: ChatInput) -> PreparedChat:
         raise BusinessError(422, "消息不能为空")
     if body.session_id is not None:
         require_session(db, body.session_id, user_id)  # 越权不能触发模型调用。
-    prepared = PreparedChat(user_id=user_id, body=body, content=content)
+    prepared = PreparedChat(
+        user_id=user_id,
+        body=body,
+        content=content,
+        history=load_history(db, body.session_id, user_id),
+    )
     db.rollback()  # 释放认证与归属查询的连接，模型生成期间不占数据库事务。
     return prepared
 
@@ -126,6 +150,8 @@ async def stream_message(prepared: PreparedChat) -> AsyncIterator[tuple[str, dic
     yield "start", metadata  # 立即确认流已建立，客户端仍需等待 done 才能确认保存。
     parts = []  # 只累计当前回答，成功前不创建会话或消息记录。
     options = prepared.body.prompt.model_dump() if prepared.body.prompt else {}
+    if prepared.history:
+        options["history"] = prepared.history  # 同步与流式共享同一裁剪规则。
     try:
         async with aclosing(stream_reply(prepared.content, **options)) as chunks:
             async for text in chunks:

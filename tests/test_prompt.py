@@ -90,7 +90,7 @@ def test_preview_has_no_model_request_and_validates_http_input(monkeypatch):
         )
     assert response.status_code == 200  # 无需模型配置即可预览。
     data = response.json()
-    assert data["template_id"] == "customer-service" and data["version"] == "1.0.0"
+    assert data["template_id"] == "customer-service" and data["version"] == "1.1.0"
     assert [message["role"] for message in data["messages"]] == ["system", "user"]
     assert "「学习店」" in data["messages"][0]["content"]  # 先校验清理，再渲染。
     assert data["messages"][1]["content"] == "退货需要什么资料？"

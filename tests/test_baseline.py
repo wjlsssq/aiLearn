@@ -63,7 +63,7 @@ def test_database_auth_chat_and_isolation(
             session_id = response.json()["session_id"]  # 记录待清理主键。
             assert response.json()["mode"] == "mock"  # 响应明确为模拟模式。
             assert (
-                response.json()["prompt_version"] == "1.0.0"
+                response.json()["prompt_version"] == "1.1.0"
             )  # 旧 Q01 调用使用默认模板。
             configured = client.post(
                 "/api/chat",
@@ -75,7 +75,7 @@ def test_database_auth_chat_and_isolation(
                 },
             )  # 在同一会话验证新配置的真实 API 与事务路径。
             assert configured.status_code == 200 and configured.json()["mode"] == "mock"
-            assert configured.json()["prompt_version"] == "1.0.0"
+            assert configured.json()["prompt_version"] == "1.1.0"
             failure_message = (
                 "model-failure-" + uuid.uuid4().hex[:12]
             )  # 本次检查的唯一消息。

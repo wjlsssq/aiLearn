@@ -37,6 +37,19 @@ def list_messages(
     )  # 按写入顺序恢复。
 
 
+def recent_messages(db: Session, session_id: int, limit: int) -> list[tuple[str, str]]:
+    """Service 授权后读取有限条历史；返回值脱离 ORM 会话仍可使用。"""
+    rows = list(
+        db.execute(
+            select(ChatMessage.role, ChatMessage.content)
+            .where(ChatMessage.session_id == session_id)
+            .order_by(ChatMessage.id.desc())
+            .limit(limit)
+        )
+    )  # SQL 层先限制数量，避免加载无限增长的历史。
+    return [(row.role, row.content) for row in reversed(rows)]  # 恢复正序。
+
+
 def create_session(
     db: Session, user_id: int, title: str
 ) -> ChatSession:  # 将新会话放进当前事务。

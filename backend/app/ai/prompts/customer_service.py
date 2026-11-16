@@ -2,10 +2,13 @@
 
 from typing import Literal  # 限定后端允许的回答风格。
 from langchain_core.messages import BaseMessage  # 标注渲染后的统一消息类型。
-from langchain_core.prompts import ChatPromptTemplate  # 把模板与业务变量分开。
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    MessagesPlaceholder,
+)  # 历史保留消息角色。
 
 PROMPT_ID = "customer-service"  # 标识模板用途，不由客户端任意指定。
-PROMPT_VERSION = "1.0.0"  # 修改模板行为时同步递增，并执行固定案例回归。
+PROMPT_VERSION = "1.1.0"  # 修改模板行为时同步递增，并执行固定案例回归。
 DEFAULT_STORE_NAME = "ShopMind 教学店"  # 兼容 Q01 未传 Prompt 配置的调用。
 PromptStyle = Literal["concise", "detailed"]  # 与接口 DTO 的风格选项对应。
 STYLE_INSTRUCTIONS = {  # 前端只传选项，实际系统指令由后端维护。
@@ -23,9 +26,12 @@ CUSTOMER_SERVICE_PROMPT = ChatPromptTemplate.from_messages(
             "不要声称已查到订单、规则或执行操作。"
             "缺少店铺依据时说明需要补充信息，不编造退换货政策。",
         ),  # 系统消息中的角色、能力边界和风格独立于用户问题。
-        ("human", "{question}"),  # 用户文本只作为变量值插入，不作为模板再次解析。
+        MessagesPlaceholder(
+            "history", optional=True
+        ),  # Q04：只接收服务端授权并裁剪的历史。
+        ("human", "{question}"),  # 当前问题始终放在最后，只插入一次。
     ]
-)  # 当前仍只有 system 与 user 两条消息，不加载历史。
+)  # 没有历史时仍只有 system 与 user；普通聊天可插入授权历史。
 
 
 def build_chat_messages(
@@ -33,10 +39,12 @@ def build_chat_messages(
     *,
     store_name: str = DEFAULT_STORE_NAME,
     style: PromptStyle = "concise",
+    history: list[BaseMessage] | None = None,
 ) -> list[BaseMessage]:
     """将已校验的业务变量渲染为消息；不请求模型、不读取数据库。"""
     return CUSTOMER_SERVICE_PROMPT.format_messages(
         store_name=store_name,  # 店铺名称来自已校验的业务字段。
         response_style=STYLE_INSTRUCTIONS[style],  # 将白名单选项映射为明确指令。
         question=question,  # 保留问题中的花括号、换行等原始文本。
+        history=history or [],  # 预览与 Q03 未传历史时保持原来的两条消息。
     )  # 预览和真实聊天必须复用同一个入口。

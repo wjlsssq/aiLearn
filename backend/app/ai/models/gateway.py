@@ -1,5 +1,6 @@
 """Q01：业务层与模型之间的单次问答边界。"""
 
+from langchain_core.messages import BaseMessage  # 历史已由服务端裁剪并保留角色。
 from dataclasses import dataclass  # 用小型不可变结果对象隔离模型返回结构。
 from collections.abc import AsyncIterator, Iterator  # 标注增量输出与错误边界。
 from contextlib import aclosing, contextmanager  # 取消时关闭上游流，复用错误转换。
@@ -42,9 +43,10 @@ def generate_reply(
     *,
     store_name: str = DEFAULT_STORE_NAME,
     style: PromptStyle = "concise",
+    history: list[BaseMessage] | None = None,
 ) -> ModelReply:  # 本课只接受当前问题，不读取历史或订单。
     messages = build_chat_messages(
-        content, store_name=store_name, style=style
+        content, store_name=store_name, style=style, history=history
     )  # 模拟和真实模式共用模板；只有后者会发送网络请求。
     if settings.chat_mode == "mock":  # 明确配置模拟模式时才使用固定回复。
         return ModelReply(
@@ -67,9 +69,12 @@ async def stream_reply(
     *,
     store_name: str = DEFAULT_STORE_NAME,
     style: PromptStyle = "concise",
+    history: list[BaseMessage] | None = None,
 ) -> AsyncIterator[str]:
     """逐块交付真实模型文本；取消时关闭上游，不把失败转换为模拟回复。"""
-    messages = build_chat_messages(content, store_name=store_name, style=style)
+    messages = build_chat_messages(
+        content, store_name=store_name, style=style, history=history
+    )
     if settings.chat_mode == "mock":  # 模拟内容必须明确标识，不冒充模型生成。
         text = f"【模拟回复】已收到：{content}。配置真实模型后可体验模型增量输出。"
         for offset in range(0, len(text), 8):  # 教学模拟按块发送，不添加打字动画延时。

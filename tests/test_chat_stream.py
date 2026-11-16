@@ -219,3 +219,60 @@ def test_database_failure_rolls_back_before_done(stream_case, monkeypatch):
     assert [name for name, _ in decode_events(response)] == ["start", "delta", "error"]
     assert "private-database-detail" not in response.text
     assert not session_exists(question)
+
+
+def test_history_survives_reload_is_authorized_and_shared_by_both_paths(
+    stream_case, monkeypatch
+):
+    """真实 MySQL 保存两轮后，新请求同步与流式都读取相同的授权历史。"""
+    from backend.app.ai.models.gateway import ModelReply
+
+    client, question, alice, bob = stream_case
+    captured = []
+
+    def reply(content, **options):
+        captured.append(options.get("history", []))
+        return ModelReply(text="记下了蓝色", mode="mock")
+
+    monkeypatch.setattr(service, "generate_reply", reply)
+    first = client.post("/api/chat", headers=alice, json={"message": question})
+    session_id = first.json()["session_id"]
+    assert captured == [[]]
+    # 新的 HTTP 请求从 MySQL 还原上一轮，前端无需上传历史。
+    second = client.post(
+        "/api/chat",
+        headers=alice,
+        json={"message": "我喜欢蓝色", "session_id": session_id},
+    )
+    assert second.status_code == 200
+    assert [m.content for m in captured[-1]] == [question, "记下了蓝色"]
+
+    async def stream(content, **options):
+        captured.append(options.get("history", []))
+        yield "蓝色"
+
+    monkeypatch.setattr(service, "stream_reply", stream)
+    streamed = client.post(
+        "/api/chat/stream",
+        headers=alice,
+        json={"message": "我喜欢什么颜色？", "session_id": session_id},
+    )
+    assert decode_events(streamed)[-1][0] == "done"
+    assert [m.content for m in captured[-1]] == [
+        question,
+        "记下了蓝色",
+        "我喜欢蓝色",
+        "记下了蓝色",
+    ]
+    count = len(captured)
+    assert (
+        client.post(
+            "/api/chat/stream",
+            headers=bob,
+            json={"message": "窥探", "session_id": session_id},
+        ).status_code
+        == 404
+    )
+    assert len(captured) == count  # 越权请求没有读取并发送上下文。
+    client.post("/api/chat", headers=alice, json={"message": question})
+    assert captured[-1] == []  # 新会话没有继承已有会话。
