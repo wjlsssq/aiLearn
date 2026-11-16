@@ -95,3 +95,6 @@ Q06 草稿模块：`schemas/draft.py` 定义字段与报告，`ai/prompts/draft.
 
 
 Q07 知识模块：`schemas/knowledge.py` 定义契约，`ai/rag/splitter.py` 只做规范化与切分，`services/knowledge.py` 管理归属、版本与事务，`repositories/knowledge.py` 管理查询及锁，`models/knowledge.py` 定义三张知识表。数据库增量变更放 `backend/migrations/versions`，通过 `backend/alembic.ini` 运行；原五张表保留初始化基线。前端使用 `components/knowledge`、`useKnowledge.ts`、`api/knowledge.ts`、`types/knowledge.ts`，由 WorkbenchView 组合，不在组件里发 HTTP。合成规则样例放 `datasets/shop-rules-demo.md`。
+
+
+Q12 工具实验：`schemas/tool_calling.py` 定义白名单参数与轨迹报告，`ai/tools/order.py` 定义 StructuredTool 并接收业务回调，`ai/models/tool_calling.py` 封装模型提议与 ToolMessage 回传，`services/tool_calling.py` 决定预算、授权身份、执行和失败结果；订单查询复用 `services/order.py` 与 `repositories/order.py`，SQL 必须同时限定用户和订单号。前端由 `components/agent/ToolCallingPanel.vue`、`useToolCalling.ts`、`api/tool-calling.ts`、`types/tool-calling.ts` 分工。不要把 user_id 放进模型 schema 或让 AI 模块反向导入业务服务。

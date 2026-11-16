@@ -12,6 +12,7 @@
 
 ## 计划入口
 
+- **当前学习路线：Agent 与业务流程**。按用户要求跳过文档检索，先读 [Q12：订单 Tool Calling](docs/lessons/Q12-tool-calling.md)，再进入 Q13 create_agent、Q14 图流程、Q15 恢复、Q16 确认与幂等。
 - [Q07：文档切分与版本](docs/lessons/Q07-document-chunking.md)：上传纯文本、双参数对比、来源高亮、MySQL 版本与迁移。
 - [Q06：结构化售后草稿](docs/lessons/Q06-structured-output.md)：JSON mode、Pydantic 严格校验、缺失追问与失败边界。
 
@@ -32,7 +33,8 @@
 
 ## 当前进度
 
-- 最新课程：Q07 文档准备已实现；首次拉取后执行 `uv sync --locked`、`uv run --locked alembic -c backend/alembic.ini upgrade head`。新库先执行 `scripts.init_db`，完整步骤见 Q07 讲义。
+- 最新课程：Q12 只读订单工具实验已实现，页面可观察模型提议、后端查询与 ToolMessage 回传。Q08～Q11 暂跳过，不作为 Agent 学习前置。
+- Q07 文档准备保留为可选实验；使用该模块需执行 `uv sync --locked`、`uv run --locked alembic -c backend/alembic.ini upgrade head`。新库先执行 `scripts.init_db`，完整步骤见 Q07 讲义。
 - Q01～Q06 已逐步完成模型调用、Prompt、Runnable、上下文、流式与结构化草稿；Q07 尚未将规则接入聊天，Q08/Q09 再实现检索与证据回答。
 - 已完成：场景选择、技术路线、20 个模块的递进计划和验收设计。
 - 环境已准备：Python 3.12.13、虚拟环境和依赖缓存实际存放在 `E:\ailearn-runtime\shopmind`；根目录 `.venv` 等入口通过目录联接访问 E 盘，依赖版本保存在 `uv.lock`。

@@ -1,4 +1,24 @@
 /* 基础色彩与尺寸统一定义，保证工作台视觉一致。 */
+.tool-json {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  background: #f7faf8;
+}
+.tool-report ol {
+  padding-left: 24px;
+}
+.tool-report li {
+  margin: 20px 0;
+  overflow-wrap: anywhere;
+}
+.tool-order {
+  border: 1px solid #d4dfd8;
+  border-radius: 8px;
+  padding: 12px;
+}
 .knowledge-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

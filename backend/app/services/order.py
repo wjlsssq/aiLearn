@@ -12,3 +12,12 @@ def list_orders(
         OrderResponse(order_no=row.order_no, product=row.product, status=row.status)
         for row in repository.list_orders(db, user_id)
     ]  # 身份不能由模型或前端任意指定。
+
+
+def find_order(db: Session, user_id: int, order_no: str) -> OrderResponse | None:
+    row = repository.find_order(db, user_id, order_no)
+    return (
+        OrderResponse(order_no=row.order_no, product=row.product, status=row.status)
+        if row
+        else None
+    )

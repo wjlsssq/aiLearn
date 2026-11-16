@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter  # 聚合业务路由。
 from .routes import knowledge
+from .routes import tool_calling
 from .routes import (
     auth,
     chat,
@@ -21,3 +22,4 @@ router.include_router(prompt.router)  # Q02：不调用模型的模板预览。
 router.include_router(chain.router)  # Q03：固定流水线实验。
 router.include_router(draft.router)  # Q06：结构化信息提取，无业务写入。
 router.include_router(knowledge.router)  # Q07：文档准备，不提前接入问答。
+router.include_router(tool_calling.router)  # Q12：跳过检索路线，先学习只读工具协议。

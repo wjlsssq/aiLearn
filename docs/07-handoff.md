@@ -74,7 +74,7 @@ git log -3 --oneline
 
 ## 5. 代码入口与下一步
 
-当前课程已进入 [Q07 文档切分与版本](lessons/Q07-document-chunking.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
+当前按用户要求跳过文档检索，进入 [Q12 订单工具协议](lessons/Q12-tool-calling.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
 
 1. 页面打开“流水线实验”，先预览带首尾空白的问题，展开 normalize / prompt 看实际字典、消息与类型；不调用模型。
 2. 切换 batch 预览两题，再按需运行。llm 模式运行两题发起两次真实模型请求，可能产生费用；实验面板整次返回步骤，普通聊天仍保持真实增量。
@@ -210,3 +210,16 @@ npm.cmd run dev -- --port 5173 --strictPort
 - 使用 computer-use 浏览器能力在独立 8001/5174 服务验证双参数对比、重复导入复用、参数变更生成 v2、历史 v1 仍可查看、原文高亮；375px 宽度下页面 scrollWidth=375，没有横向溢出。截图 runtime/Q07-knowledge-preview.png 已忽略、不随 Git 同步。唯一命名验收文档已精确清理，临时服务已停止，未操作用户 IDEA 8000/5173，未调用付费模型。
 - 当前是用户私有教学规则库，未实现共享店铺管理员角色；未来共享规则发布必须另做授权。原有 Q02 讲义和 docs/面试.md 的用户改动继续保留，不混入本次提交。
 - 下一步：用户重新 Debug 后打开“规则知识库”，按 docs/lessons/Q07-document-chunking.md 对比边界、重叠与版本。理解后进入 Q08 Embedding、相似度与 Top-K；届时确认可用的 Embedding 服务，不默认聊天服务支持 Embedding。
+
+
+### 路线调整与 Q12 Agent 阶段交接（2026-11-16）
+
+- 用户明确要求跳过文档切分检索，直接进入 Agent 与业务流程阶段。已写入 AGENTS.md、README 和课程计划：当前 Q12 Tool Calling → Q13 create_agent → Q14 LangGraph → Q15 恢复 → Q16 用户确认与幂等；不要求先学 Q08～Q11 或配置 Embedding，不把跳过内容标成已学会。Q07 已有代码与可选入口保留。
+- 新增受认证保护的 /api/tool-calling/schema 与 /run，以及独立“订单工具实验”面板。一次决策、至多一个只读工具、一次结果回传，最多两次模型请求；普通流式聊天暂不自动调用工具，不保存实验问答，不退款或建单。
+- lookup_my_order 工具只有严格 order_no 参数，身份来自路由 Bearer 认证，在 Service 回调中捕获 user_id。模型、前端或工具参数都不能覆盖身份。查询复用原订单 Service / Repository，WHERE 同时限定用户与订单号；他人订单与不存在订单统一 not_found。物流只有明确教学模拟说明，无外部物流服务。
+- 原工具 schema 转为供应商格式后可能精简 additionalProperties，因此本地 Pydantic 校验不可省略；未知工具、夹带 user_id、非法参数不执行查询。无效 JSON / ID、多个调用超预算先阻止；第二轮再请求工具也不执行。ToolMessage 使用原调用 ID 与原 assistant 调用一起回传。
+- 真实模式使用已选 DeepSeek 工厂与 bind_tools；模拟模式只固定查询 DEMO-A001，不理解任意问题，模型请求计数为零，订单卡片仍来自当前用户真实教学 MySQL。最终模型文字需与确定性卡片核对，不能当作事实保证。不展示模型私有思考链。
+- 没有新增依赖、表、迁移或环境字段。新增 schemas / Service / AI tools / AI models / API 模块，前端按组件 / composable / API / types 拆分。讲义 docs/lessons/Q12-tool-calling.md 提供调用链、逐行断点、30 秒面试回答与失败实验。
+- 验证：最终98项后端通过（真实MySQL与两种真实适配器内存协议，含非对象参数安全错误）；83个Python文件格式检查通过，5项前端测试、Prettier、TypeScript/Vite通过，仅有原包体提示。没有调用付费模型，真实模型选工具/澄清行为待用户验收。
+- 浏览器在独立8001/5174模拟服务验证模型提议 → 工具执行 → 结果答复轨迹、调用ID、参数和MySQL卡片；375px下页面宽度无横向溢出。截图 runtime/Q12-order-tools.png 已忽略，临时服务已停止，未操作用户IDEA8000/5173。实验只读，不创建会话或订单。
+- 原有 Q02 讲义和 docs/面试.md 继续保留，不混入提交。下一步用户重新 Debug backend/run.py，刷新后打开“订单工具实验”，按Q12讲义观察tool_calls、参数校验、短数据库会话和ToolMessage。理解后直接Q13 create_agent；规则检索工具可选，不强制回到RAG。

@@ -9,3 +9,10 @@ def list_orders(db: Session, user_id: int) -> list[Order]:  # 只查询当前用
     return list(
         db.scalars(select(Order).where(Order.user_id == user_id).order_by(Order.id))
     )  # 明确返回顺序。
+
+
+def find_order(db: Session, user_id: int, order_no: str) -> Order | None:
+    return db.scalar(
+        select(Order).where(Order.user_id == user_id, Order.order_no == order_no)
+    )
+    # 订单号与认证用户同时限定，猜到编号也不能越权读取。

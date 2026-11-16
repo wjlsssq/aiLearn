@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
+import ToolCallingPanel from '../components/agent/ToolCallingPanel.vue'
+import { useToolCalling } from '../composables/useToolCalling'
 import KnowledgePanel from '../components/knowledge/KnowledgePanel.vue'
 import { useKnowledge } from '../composables/useKnowledge'
 import DraftLab from '../components/workbench/DraftLab.vue'
@@ -47,6 +49,7 @@ const {
 const lab = useChainLab(token, logout)
 const draftLab = reactive(useDraftLab(token, logout)) // 展示组件与提取业务状态分离。
 const knowledge = reactive(useKnowledge(token, logout))
+const toolCalling = reactive(useToolCalling(token, logout))
 // 解构 ref 供模板自动解包，避免组件接收到 Ref 对象。
 const {
   visible: chainVisible,
@@ -116,6 +119,17 @@ const {
           @retry="retry"
         >
           <template #settings>
+            <ToolCallingPanel
+              v-model:visible="toolCalling.visible"
+              v-model:question="toolCalling.question"
+              :busy="toolCalling.busy"
+              :mode="chatMode"
+              :definition="toolCalling.definition"
+              :report="toolCalling.report"
+              :error="toolCalling.error"
+              @open="toolCalling.open"
+              @run="toolCalling.run"
+            />
             <KnowledgePanel
               v-model:visible="knowledge.visible"
               v-model:title="knowledge.title"
