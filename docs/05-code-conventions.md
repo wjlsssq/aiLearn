@@ -92,3 +92,6 @@ Python 保持四空格缩进。教学注释继续解释实际语句、输入输�
 
 
 Q06 草稿模块：`schemas/draft.py` 定义字段与报告，`ai/prompts/draft.py` 生成提取消息，`ai/models/draft.py` 处理供应商结构化调用，`services/draft.py` 做来源与缺失项判断，`api/routes/draft.py` 提供认证接口；前端对应 `DraftLab.vue`、`useDraftLab.ts`、`api/draft.ts`、`types/draft.ts`。本阶段不持久化，不为草稿创建空 Repository 或数据库表。
+
+
+Q07 知识模块：`schemas/knowledge.py` 定义契约，`ai/rag/splitter.py` 只做规范化与切分，`services/knowledge.py` 管理归属、版本与事务，`repositories/knowledge.py` 管理查询及锁，`models/knowledge.py` 定义三张知识表。数据库增量变更放 `backend/migrations/versions`，通过 `backend/alembic.ini` 运行；原五张表保留初始化基线。前端使用 `components/knowledge`、`useKnowledge.ts`、`api/knowledge.ts`、`types/knowledge.ts`，由 WorkbenchView 组合，不在组件里发 HTTP。合成规则样例放 `datasets/shop-rules-demo.md`。

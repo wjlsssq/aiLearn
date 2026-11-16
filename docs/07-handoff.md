@@ -54,7 +54,7 @@ git log -3 --oneline
 2. 按 [Python 环境重建](00-environment.md#5-新电脑或重新准备环境) 创建 E 盘运行目录、Python 3.12.13、虚拟环境与目录联接，然后 `uv sync --locked`。不要把已有普通目录覆盖为联接。没有 E 盘时先与用户确认替代盘符，再统一调整脚本和文档。
 3. 根目录执行 `powershell -ExecutionPolicy Bypass -File scripts/install_frontend.ps1`，从锁文件将前端依赖安装到 E 盘并创建入口。
 4. 仅在没有本机 `.env` 时复制 `.env.example` 为 `.env`，填写本机 MySQL 密码和自己的 `LLM_API_KEY`。原电脑数据库账号由用户提供，另一台应按自己的 MySQL 实际设置填写。
-5. 执行 `uv run --locked python -m scripts.init_db`，初始化独立教学库 `langchain_lab` 和合成数据。Git 不同步 MySQL 数据或原电脑会话；另一台会有自己的数据。
+5. 执行 `uv run --locked python -m scripts.init_db`，再执行 `uv run --locked alembic -c backend/alembic.ini upgrade head`，初始化独立教学库 `langchain_lab` 和合成数据。Git 不同步 MySQL 数据或原电脑会话；另一台会有自己的数据。
 6. IDEA 项目解释器选择 `E:\ailearn-runtime\shopmind\venv\Scripts\python.exe`，建议打开仓库根目录；右键 `backend/run.py` → Debug。不要直接运行 routes 或 services 中的文件。
 7. 另开终端进入 `frontend`，执行 `npm.cmd run dev -- --port 5173 --strictPort`，浏览器访问 `http://127.0.0.1:5173`。
 
@@ -74,7 +74,7 @@ git log -3 --oneline
 
 ## 5. 代码入口与下一步
 
-当前课程已进入 [Q06 结构化输出](lessons/Q06-structured-output.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
+当前课程已进入 [Q07 文档切分与版本](lessons/Q07-document-chunking.md)，下方 Q03 操作为历史阅读路线。后端由用户自己在 IDEA 中 Debug；不要自动启动或重启占用 8000 端口的后台服务。修改后需由用户停止旧 Debug 再重新启动，前端刷新即可。
 
 1. 页面打开“流水线实验”，先预览带首尾空白的问题，展开 normalize / prompt 看实际字典、消息与类型；不调用模型。
 2. 切换 batch 预览两题，再按需运行。llm 模式运行两题发起两次真实模型请求，可能产生费用；实验面板整次返回步骤，普通聊天仍保持真实增量。
@@ -197,3 +197,16 @@ npm.cmd run dev -- --port 5173 --strictPort
 - 先执行 git pull：直连被重置，发现当前系统代理是 127.0.0.1:7897 后单次指定代理成功，无远端更新；没有修改共享 Git 配置。后续网络问题先检查系统实际代理，不套旧 7892。
 - 验证：69 项 pytest 通过（含真实 MySQL、原流式/上下文与 Q06 两种适配器内存 HTTP）、5 项前端计时/SSE 测试通过，Prettier / TypeScript / Vite 构建通过，仍有原 Element Plus 包体提示。真实 DeepSeek 提取效果仍待用户配置并体验，本次协议测试不调用付费服务，未操作用户 IDEA 或 8000 进程。
 - 原有 Q02 讲义改动和 docs/面试.md 保留且不混入提交。下一步由用户重新 Debug 后打开售后草稿，按 Q06 讲义实验完整描述、缺订单号、unknown 类型与字段校验，再进入 Q07 RAG。
+
+
+### Q07 实现与学习交接（2026-11-16）
+
+- 用户要求 Q06 后下一课，进入 RAG 文档准备：上传/粘贴 UTF-8 .txt / .md、A/B 切分对比、来源行与码点范围、原文高亮、MySQL 原文/版本/分块持久化。尚无 Embedding、检索或引用回答；普通聊天不读取已导入规则。
+- 新依赖 langchain-text-splitters==1.1.3 已通过 uv 安装到 E 盘，pyproject.toml 与 uv.lock 同步。每次拉取后先 uv sync --locked；本次没有新增前端依赖。
+- 第一次启用 Alembic，backend/alembic.ini + backend/migrations 管理新增知识表，revision=0001_knowledge。本机已 upgrade 到 head。旧五张业务表仍由 init_db 创建，脚本已限定基线表，不会偷偷 create_all 新知识表。另一台电脑必须先 init_db（新库），再执行 uv run --locked alembic -c backend/alembic.ini upgrade head；不能 stamp 冒充执行，也不要 downgrade 删除知识数据。Windows INI 保持 ASCII，中文说明在 env.py 与迁移中，避免本地 GBK 解码失败。
+- 唯一文档键由当前用户与规范化标题确定；同文档当前 fingerprint 相同复用，内容/参数/算法改变追加版本并原子切换 active_revision，历史仍可追溯。A→B→A 会新增版本，不自动恢复旧版号。MySQL upsert+行锁串行同文档导入，先释放认证旧快照，防止并发等待后读到旧版本。未来检索必须按用户和当前有效版本过滤。
+- 切分按 Python 字符数，最多 20000 个原文码点、512 块；块大小 64～2000，重叠 0～1000 且小于块大小。BOM / CRLF 规范化后定位，保留其他空白，逐块检查 source[start:end]；前端 Array.from 做码点高亮。标题只取块起点前最近的 Markdown 标题，非完整文档语法解析，不支持 PDF/Word/表格专用解析。
+- 验证：78 项 pytest 通过（真实 MySQL、来源覆盖、重复正文、emoji、版本与参数变化、跨用户隔离、写入故障回滚、并发重复导入）；5 项前端测试通过。TypeScript 初次发现输入数字回调类型缺失，修正后 Prettier / TypeScript / Vite 构建通过，仅有原 Element Plus 大包体提示。最终收工再次确认 76 个 Python 文件格式通过，init_db 与 Alembic upgrade 重复执行通过，仍为 0001_knowledge head；78 项后端与 5 项前端测试及构建均通过。
+- 使用 computer-use 浏览器能力在独立 8001/5174 服务验证双参数对比、重复导入复用、参数变更生成 v2、历史 v1 仍可查看、原文高亮；375px 宽度下页面 scrollWidth=375，没有横向溢出。截图 runtime/Q07-knowledge-preview.png 已忽略、不随 Git 同步。唯一命名验收文档已精确清理，临时服务已停止，未操作用户 IDEA 8000/5173，未调用付费模型。
+- 当前是用户私有教学规则库，未实现共享店铺管理员角色；未来共享规则发布必须另做授权。原有 Q02 讲义和 docs/面试.md 的用户改动继续保留，不混入本次提交。
+- 下一步：用户重新 Debug 后打开“规则知识库”，按 docs/lessons/Q07-document-chunking.md 对比边界、重叠与版本。理解后进入 Q08 Embedding、相似度与 Top-K；届时确认可用的 Embedding 服务，不默认聊天服务支持 Embedding。

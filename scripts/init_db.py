@@ -21,7 +21,19 @@ try:  # 无论成功失败都释放临时连接池。
         )  # 幂等创建独立教学库。
 finally:  # 不保留初始化连接。
     server.dispose()  # 关闭服务端连接池。
-Base.metadata.create_all(engine)  # 阶段 0 基线；后续表结构变更使用 Alembic 迁移。
+Base.metadata.create_all(
+    engine,
+    tables=[
+        Base.metadata.tables[name]
+        for name in (
+            "users",
+            "access_tokens",
+            "orders",
+            "chat_sessions",
+            "chat_messages",
+        )
+    ],
+)  # 只建阶段 0 五张基线表；Q07 及后续新增表通过 Alembic 管理。
 with SessionLocal.begin() as db:  # 种子用户和订单一起提交。
     for name, product, number in [
         ("alice", "无线降噪耳机", "DEMO-A001"),

@@ -1,6 +1,7 @@
 """集中注册业务路由，统一 /api 前缀。"""
 
 from fastapi import APIRouter  # 聚合业务路由。
+from .routes import knowledge
 from .routes import (
     auth,
     chat,
@@ -19,3 +20,4 @@ router.include_router(chat.router)  # 聊天与会话。
 router.include_router(prompt.router)  # Q02：不调用模型的模板预览。
 router.include_router(chain.router)  # Q03：固定流水线实验。
 router.include_router(draft.router)  # Q06：结构化信息提取，无业务写入。
+router.include_router(knowledge.router)  # Q07：文档准备，不提前接入问答。

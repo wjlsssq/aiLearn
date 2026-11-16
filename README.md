@@ -12,6 +12,7 @@
 
 ## 计划入口
 
+- [Q07：文档切分与版本](docs/lessons/Q07-document-chunking.md)：上传纯文本、双参数对比、来源高亮、MySQL 版本与迁移。
 - [Q06：结构化售后草稿](docs/lessons/Q06-structured-output.md)：JSON mode、Pydantic 严格校验、缺失追问与失败边界。
 
 - [Q05：流式输出与取消](docs/lessons/Q05-streaming-cancellation.md)：首段/结束耗时、协议、断点和失败实验。
@@ -31,6 +32,8 @@
 
 ## 当前进度
 
+- 最新课程：Q07 文档准备已实现；首次拉取后执行 `uv sync --locked`、`uv run --locked alembic -c backend/alembic.ini upgrade head`。新库先执行 `scripts.init_db`，完整步骤见 Q07 讲义。
+- Q01～Q06 已逐步完成模型调用、Prompt、Runnable、上下文、流式与结构化草稿；Q07 尚未将规则接入聊天，Q08/Q09 再实现检索与证据回答。
 - 已完成：场景选择、技术路线、20 个模块的递进计划和验收设计。
 - 环境已准备：Python 3.12.13、虚拟环境和依赖缓存实际存放在 `E:\ailearn-runtime\shopmind`；根目录 `.venv` 等入口通过目录联接访问 E 盘，依赖版本保存在 `uv.lock`。
 - 数据库已确认：两台电脑分别使用 MySQL 8.0.35 / 8.0.45；本机配置和恢复记录见交接文档。

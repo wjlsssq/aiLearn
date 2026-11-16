@@ -15,7 +15,7 @@ const emit = defineEmits<{ 'new-session': []; 'open-session': [id: number] }>() 
       <span>ShopMind</span>
     </div>
     <p class="muted">智能售后客服 · 学习工作台</p>
-    <div class="stage">Q03 / Runnable 与 LCEL</div>
+    <div class="stage">Q07 / 文档切分与版本</div>
     <el-button
       v-if="authenticated"
       :disabled="busy"

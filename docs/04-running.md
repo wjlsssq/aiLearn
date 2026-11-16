@@ -13,6 +13,8 @@
 ```powershell
 # 幂等初始化独立教学库和合成数据，不清空已有数据。
 uv run --locked python -m scripts.init_db
+# Q07 起新增表使用迁移，老库与新库都要执行；不改变原有聊天数据。
+uv run --locked alembic -c backend/alembic.ini upgrade head
 # 运行后端，接口文档位于 http://127.0.0.1:8000/docs。
 uv run --locked uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
@@ -26,7 +28,7 @@ Set-Location 'C:\Users\27959\Desktop\ailearn\frontend'
 npm.cmd run dev -- --port 5173 --strictPort
 ```
 
-访问 [客服工作台](http://127.0.0.1:5173)。教学账号 `alice` 和 `bob`，密码均为 `Learn123!`。阶段 0 验收使用合成订单和模拟回复；当前已进入 [Q01](lessons/Q01-langchain-models.md)，模型模式以 `.env` 为准，真实调用需填写用户自己的 DeepSeek Key。
+访问 [客服工作台](http://127.0.0.1:5173)。教学账号 `alice` 和 `bob`，密码均为 `Learn123!`。阶段 0 验收使用合成订单和模拟回复；当前已进入 [Q07](lessons/Q07-document-chunking.md)，模型模式以 `.env` 为准，真实聊天需填写用户自己的 DeepSeek Key，文档切分不需要密钥。
 
 ## 观察数据闭环
 
@@ -39,7 +41,7 @@ npm.cmd run dev -- --port 5173 --strictPort
 
 数据库包含 users、access_tokens、orders、chat_sessions、chat_messages。密码保存加盐 scrypt 摘要；令牌保存 SHA256 摘要并设置到期时间。查询订单和会话始终附带认证用户归属条件。
 
-本阶段通过显式 `create_all` 建立初始基线。它不会迁移已有字段；后续表结构变更会接入 Alembic，不能靠重复运行初始化脚本更新列定义。
+阶段 0 通过显式 `create_all` 建立五张表的初始基线；Q07 已接入 Alembic，知识库新增三张表由迁移管理。`create_all` 不会迁移已有字段，不能靠重复运行初始化脚本更新列定义。
 
 ## 验证与依赖
 

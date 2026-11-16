@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
+import KnowledgePanel from '../components/knowledge/KnowledgePanel.vue'
+import { useKnowledge } from '../composables/useKnowledge'
 import DraftLab from '../components/workbench/DraftLab.vue'
 import { useDraftLab } from '../composables/useDraftLab'
 import SessionSidebar from '../components/workbench/SessionSidebar.vue' // 会话导航。
@@ -44,6 +46,7 @@ const {
 } = useWorkbench() // 页面仅组合组件和绑定状态。
 const lab = useChainLab(token, logout)
 const draftLab = reactive(useDraftLab(token, logout)) // 展示组件与提取业务状态分离。
+const knowledge = reactive(useKnowledge(token, logout))
 // 解构 ref 供模板自动解包，避免组件接收到 Ref 对象。
 const {
   visible: chainVisible,
@@ -113,6 +116,27 @@ const {
           @retry="retry"
         >
           <template #settings>
+            <KnowledgePanel
+              v-model:visible="knowledge.visible"
+              v-model:title="knowledge.title"
+              v-model:text="knowledge.text"
+              v-model:first="knowledge.first"
+              v-model:second="knowledge.second"
+              :busy="knowledge.busy"
+              :valid="knowledge.valid"
+              :previews="knowledge.previews"
+              :imported="knowledge.imported"
+              :documents="knowledge.documents"
+              :versions="knowledge.versions"
+              :selected-document="knowledge.selectedDocument"
+              :saved="knowledge.saved"
+              :error="knowledge.error"
+              @open="knowledge.open"
+              @compare="knowledge.compare"
+              @save="knowledge.save"
+              @load="knowledge.load"
+              @upload="knowledge.upload"
+            />
             <DraftLab
               v-model:visible="draftLab.visible"
               v-model:description="draftLab.description"
