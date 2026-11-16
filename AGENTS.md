@@ -14,6 +14,7 @@
 - Python 解释器、虚拟环境、Python/npm 缓存和前端依赖放 E 盘。项目内 `.venv`、`.tools`、`.cache` 和 `frontend/node_modules` 为目录联接，不能用普通目录覆盖。
 - 前端依赖通过 `scripts/install_frontend.ps1` 同步到 E 盘；新增依赖后同时同步前端 package.json、package-lock.json。不要在源码目录直接运行 npm install。
 - 数据库使用 MySQL；不提交 `.env`、密钥、IDE 本机配置、依赖、缓存、运行数据或构建产物。
+- 用户于 2026-11-16 明确要求将本地开发库全量 SQL 推送 Git；特许提交 `database/snapshots/langchain_lab.sql`（表结构与全部业务数据，包括身份摘要），并维护恢复说明。该授权不包括 `.env`、明文 API Key、数据集明文密码文件或 MySQL 系统账号库；不要将其他运行文件一并加入，也不要默认每次功能改动都重新导出快照。
 
 ## 前端职责
 

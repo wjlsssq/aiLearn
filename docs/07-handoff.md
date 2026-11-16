@@ -40,6 +40,7 @@ git log -3 --oneline
 - 退役接口：`/api/prompts/preview`、`/api/chains/*`、`/api/tool-calling/*`、`/api/knowledge/example`、`/api/knowledge/preview`。当前分层入口见 [架构](05-code-conventions.md)；不要按历史交接恢复实验面板。
 - 本次没有新增依赖、环境字段、表结构或迁移；知识表仍为 `0001_knowledge`。现有用户数据及其示例标识原样保留。
 - 用户要求直接连接本地 MySQL 扩充业务场景，已通过 `scripts/seed_business_data.py` 新增 biz 数据集：1,000 个用户、20,000 笔订单；本机合计 1,002 用户、20,002 订单。alice、bob 各新增 200 笔，原密码和 DEMO 订单保留。生成器默认预览，`--apply` 才写入，支持命名数据集与重复执行；无新增依赖/迁移/产品接口。细节见 [本地业务数据](10-business-data.md)。
+- 用户随后明确要求全量 SQL 推送 Git，已新增 `database/snapshots/langchain_lab.sql` 和 [恢复说明](../database/README.md)：9 张表的完整结构与全部数据，包含 1,002 用户、20,002 订单、11 会话、44 消息、9 条令牌摘要及迁移版本。没有导出 MySQL 系统库、连接密码、模型密钥或 runtime 明文密码。此 SQL 是按需手动恢复的快照，不是 Git 自动同步数据库。
 
 ## 4. 另一台电脑恢复环境
 
@@ -49,7 +50,7 @@ git log -3 --oneline
 2. 按 [环境恢复](00-environment.md#5-新电脑或重新准备环境) 创建 E 盘运行目录、Python 3.12.13 和目录联接，根目录执行 `uv sync --locked`。没有 E 盘时先确认替代盘符，不覆盖普通目录。
 3. 根目录执行 `powershell -ExecutionPolicy Bypass -File scripts/install_frontend.ps1`，从锁文件安装依赖到 E 盘。
 4. 仅本机没有 `.env` 时复制 `.env.example`，填写自己的 MySQL 与模型配置；密钥不通过聊天、文档或 Git 传递。
-5. 新库先执行 `uv run --locked python -m scripts.init_db`，再执行 `uv run --locked alembic -c backend/alembic.ini upgrade head`。已有库可幂等执行，不清空数据；Git 不同步 MySQL 内容。
+5. 需要完整交接数据时，按 database/README.md 将全量 SQL 导入新建空库，再运行 `uv run --locked alembic -c backend/alembic.ini upgrade head`；不必重复初始化或生成同一批样本。只需要独立空白开发环境时，可改用 `scripts.init_db` 加迁移。SQL 含 DROP TABLE，不要直接覆盖已有库；Git 拉取不会自动执行导入。
 6. IDEA 解释器选择 `E:\ailearn-runtime\shopmind\venv\Scripts\python.exe`。打开仓库根目录，右键 `backend/run.py` → Debug。入口通过 asyncio.Runner 绕开旧 IDEA pydevd 的 loop_factory 参数冲突；单进程，无热重载。不要直接运行 routes/services。
 7. 另开终端进入 frontend，运行 `npm.cmd run dev -- --port 5173 --strictPort`，访问 `http://127.0.0.1:5173`。
 
@@ -59,12 +60,19 @@ git log -3 --oneline
 
 ## 5. 本次验证与未完成事项
 
+2026-11-16 全量 SQL 交接：
+
+- 原生 MySQL 8.0.35 mysqldump 单事务导出，文件 3,353,229 字节，SHA256 为 `5be4ed6541938631d2755e830251e6af020025ba23b2104989b420a1459c7072`；包括所有 9 张表，空知识表也保留完整结构。例程/事件/触发器当前为 0，导出参数仍完整覆盖它们；恢复时每表批量提交，避免逐行落盘。
+- 真实导入独立临时库，逐表核对 SHOW CREATE TABLE 和全部数据 SHA256，9 表结构、行数和数据一致；校验结束再核对源库未变化，临时库已删除。源业务库没有被恢复覆盖或重置，没有请求模型。
+- 已检查明显密钥特征及本机实际模型 Key，未发现其进入 SQL；密码摘要和令牌摘要按用户全量要求保留。runtime 数据集明文密码文件、.env、个人笔记仍不提交。SQL 恢复保留原密码，另一台使用样本新账号时需自行保留原本机凭据，不能从摘要获得明文。
+- 新增 scripts/export_database.py 供以后按需导出，连接密码仅通过子进程环境传递；输出成功且检查通过才替换快照。76 个 Python 文件格式检查和新导出脚本 Ruff 静态检查通过。本次验证以真实导出/恢复为主，未改业务/前端，不重复运行完整 pytest 或前端构建。
+
 2026-11-16 本地批量业务数据：
 
 - 已写入并核对全部 20,000 笔新增订单的编号、归属、商品和状态；160 种商品规格组合、10 种状态，100 个无订单新用户，约 5% 高频买家承担约 30% 新用户订单。没有孤立订单，1,000 个新用户密码盐均不同。再次实际执行生成器零新增，不覆盖数据。
 - 真实登录与订单 API 验证：alice/bob 各 201 笔，sim_biz_000001 为 0 笔，sim_biz_000101 为 24 笔，sim_biz_001000 为 110 笔；原开发账号仍能登录，原 DEMO 订单保留，跨用户查询受限。验收令牌已退出撤销，没有调用模型或操作用户后台服务。
 - 新增 5 项生成器专项检查：预览零写入、确定性与场景分布、重复执行及随机盐、冲突不覆盖、批次失败整批回滚。批量数据已存在时完整后端回归 95 项通过，75 个 Python 文件格式检查通过，新文件 Ruff 静态检查通过。本次未修改前端，未重复执行前端构建。
-- 新用户数据集密码仅存本机忽略文件 runtime/business-data-biz.credentials.json；不提交、打印或传到另一台。数据库数据也不随 Git 同步，另一台按文档运行生成器，会生成自己的密码文件。原有 Q02 讲义和面试笔记不混入本次提交。
+- 新用户数据集明文密码仅存本机忽略文件 runtime/business-data-biz.credentials.json，不提交或打印。原先只通过生成器在另一台独立造数；用户后续已要求提交完整 SQL，当前可按上方快照恢复原数据和密码摘要。原有 Q02 讲义和面试笔记不混入本次提交。
 - 当前实体没有金额、收货地址、创建时间或真实物流轨迹，此次只填现有业务字段，不虚构这些能力。未修改前端，无需安装依赖或重启后端；重新登录可加载最新订单。
 
 2026-11-16 企业工作台改造：
@@ -80,7 +88,7 @@ git log -3 --oneline
 
 用户停止旧 IDEA Debug 后重新运行 backend/run.py，刷新前端即可看到新页面。按实际账号在本机配置 llm 后自行体验真实回复、订单查询和售后提取；本次不擅自消耗付费额度。
 
-业务样本已在当前本地 MySQL 中生成；alice/bob 重新登录即可看到各 201 笔，其他账号和密码位置见业务数据文档。新电脑先拉取代码并阅读交接，再按需执行批量生成脚本，不能以为 Git 会同步数据库。
+业务样本已在当前本地 MySQL 中生成；alice/bob 重新登录即可看到各 201 笔，其他账号和密码位置见业务数据文档。新电脑先拉取并阅读交接，按 database/README.md 在空库恢复全量 SQL 后启动；如果选择独立造数再使用生成器。不要把拉取 SQL 文件误认为数据库已经完成恢复。
 
 下一阶段围绕实际服务会话接入 create_agent 和授权订单工具，使业务助手按需求选择工具、澄清信息，并保留取消、失败、持久化和权限约束；后续再做显式流程、恢复、人工确认与幂等。技术细节留在注释、调试和研发文档，页面只显示用户需要的执行状态与结果。不将检索配置作为前置，不一次堆入全部未完成功能。
 

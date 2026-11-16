@@ -27,6 +27,7 @@ API 只适配 HTTP，Service 决定身份、业务规则与事务，Repository �
 - `services/knowledge.py` 管理私有文档与版本，切分由 ai/rag/splitter.py 内部完成；接口不再提供教学样例或分块 A/B 预览。
 - 新表与改表经 `backend/migrations` / `backend/alembic.ini` 管理，原五张表仅保留初始化基线。
 - `scripts/seed_business_data.py` 只用于本地开发样本追加，默认预览；批量用户和订单在同一事务写入，不作为 HTTP 产品接口，运行数据和凭据仅存忽略目录。用法见 [业务数据](10-business-data.md)。
+- `database/snapshots` 存放用户明确授权提交的开发库全量 SQL，`database/README.md` 说明恢复和验证；`scripts/export_database.py` 调用原生 mysqldump 更新快照，不自动导入或覆盖现有库。其他运行数据和明文凭据仍不提交。
 
 ## 验证与交接
 

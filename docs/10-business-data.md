@@ -37,7 +37,7 @@ uv run --locked python -X utf8 -m scripts.seed_business_data --dataset extra --u
 
 直接重新登录 alice 或 bob，即可在订单中心看到各 201 笔记录。已有页面没有自动轮询订单，已登录时重新登录可重新加载；无需修改 `.env` 或重启后端。
 
-新用户使用本机随机生成的数据集密码，位于已忽略的 `runtime/business-data-biz.credentials.json`；可以在编辑器中查看，不能提交或复制到交接文档。每个用户仍使用不同盐保存摘要。生成器不重置已存在用户密码。另一台电脑运行同一脚本会创建自己的密码文件，不通过 Git 同步密码或数据库数据。
+新用户使用本机随机生成的数据集密码，位于已忽略的 `runtime/business-data-biz.credentials.json`；可以在编辑器中查看，不能提交或复制到交接文档。每个用户仍使用不同盐保存摘要。生成器不重置已存在用户密码。另一台电脑独立运行生成器会创建自己的密码；若按[全量 SQL](../database/README.md)恢复，则保留原账号和密码摘要，不能再以为恢复后的用户使用另一台新生成的密码。明文密码文件始终不随 Git 同步。
 
 可观察账号：`sim_biz_000001`（无订单）、`sim_biz_000101`（普通买家）、`sim_biz_001000`（高频买家）。查询 `SIM-BIZ-00000001` 时只有 alice 有权查看；bob 和其他用户的查询结果与不存在订单一致。生成后摘要保存在 `runtime/business-data-biz.report.json`，只包含数量、分布和凭据文件路径，不含密码或令牌。
 
