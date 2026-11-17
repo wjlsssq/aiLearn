@@ -1,4 +1,4 @@
-/* 会话、消息与业务上下文布局。 */
+/* 会话列表与消息布局。 */
 .conversation-workspace {
   display: flex;
   flex: 1;
@@ -533,4 +533,56 @@
   border-radius: 5px;
   font-size: 9px;
   line-height: 1.3;
+}
+
+/* 列表收起为窄栏，保留展开与新建入口；当前对话仍保持挂载。 */
+.session-list-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.session-heading h2 {
+  flex: 1;
+}
+.session-toggle {
+  margin-left: 5px;
+}
+.session-sidebar.is-collapsed {
+  width: 56px;
+  padding: 18px 8px;
+}
+.session-sidebar.is-collapsed .session-heading {
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+}
+.session-sidebar.is-collapsed .session-toggle {
+  margin-left: 0;
+}
+.session-avatar {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+}
+.session-tone-0 {
+  background: #edf1ff;
+  color: #6c79c8;
+}
+.session-tone-1 {
+  background: #e8f5f1;
+  color: #4b9583;
+}
+.session-tone-2 {
+  background: #f3edfa;
+  color: #9976b8;
+}
+.session-tone-3 {
+  background: #fff3e7;
+  color: #bf925c;
+}
+.session-item.active .session-avatar {
+  background: #dfe8ff;
+  color: #5577cd;
 }

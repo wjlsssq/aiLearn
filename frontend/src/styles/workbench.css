@@ -213,3 +213,19 @@
     margin: 13px 0;
   }
 }
+
+@media (max-width: 560px) {
+  .session-list-content {
+    min-height: 0;
+  }
+  .session-sidebar.is-collapsed {
+    width: 100%;
+    height: 50px;
+    padding: 9px 12px;
+  }
+  .session-sidebar.is-collapsed .session-heading {
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 0;
+  }
+}

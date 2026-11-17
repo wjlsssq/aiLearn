@@ -16,6 +16,14 @@ const paths: Record<string, string> = {
   check: 'm5 12 4 4 10-10',
   refresh: 'M20 7v5h-5 M4 17v-5h5 M6 6a8 8 0 0 1 13 2 M18 18a8 8 0 0 1-13-2',
   chevron: 'm9 5 7 7-7 7',
+  'panel-close': 'M4 4h16v16H4z M9 4v16 M16 9l-3 3 3 3',
+  'panel-open': 'M4 4h16v16H4z M9 4v16 M13 9l3 3-3 3',
+  chat: 'M7 4h10a4 4 0 0 1 4 4v5a4 4 0 0 1-4 4h-6l-5 4v-4a4 4 0 0 1-3-4V8a4 4 0 0 1 4-4Z M8 10h8',
+  dialogue:
+    'M14 3H6a3 3 0 0 0-3 3v5a3 3 0 0 0 3 3v3l4-3h4a3 3 0 0 0 3-3V6a3 3 0 0 0-3-3Z M10 18h4l4 3v-3a3 3 0 0 0 3-3v-5',
+  'chat-lines': 'M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6 4V6a2 2 0 0 1 2-2Z M7 9h10 M7 13h6',
+  'chat-dots':
+    'M12 3a9 8 0 0 1 9 8 9 8 0 0 1-9 8H8l-5 3 1-7a8 8 0 0 1-1-4 9 8 0 0 1 9-8Z M7 11h.01 M12 11h.01 M17 11h.01',
   stop: 'M6 6h12v12H6z',
 }
 </script>
