@@ -220,13 +220,9 @@
   }
   .session-sidebar.is-collapsed {
     width: 100%;
-    height: 50px;
-    padding: 9px 12px;
-  }
-  .session-sidebar.is-collapsed .session-heading {
-    flex-direction: row;
-    justify-content: space-between;
-    margin-bottom: 0;
+    height: 0;
+    padding: 0;
+    border-bottom: 0;
   }
 }
 
@@ -246,5 +242,9 @@
   }
   .session-sidebar.is-collapsed .session-edge-toggle svg {
     transform: rotate(90deg);
+  }
+  .session-sidebar.is-collapsed .session-edge-toggle {
+    right: 50%;
+    bottom: -18px;
   }
 }

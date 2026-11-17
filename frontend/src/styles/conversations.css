@@ -536,7 +536,7 @@
   line-height: 1.3;
 }
 
-/* 列表收起为窄栏，保留展开与新建入口；当前对话仍保持挂载。 */
+/* 收起时释放整个列表宽度，只保留不占布局空间的展开把手。 */
 .session-list-content {
   display: flex;
   flex-direction: column;
@@ -547,13 +547,15 @@
   flex: 1;
 }
 .session-sidebar.is-collapsed {
-  width: 56px;
-  padding: 18px 8px;
+  width: 0;
+  padding: 0;
+  border-right: 0;
 }
 .session-sidebar.is-collapsed .session-heading {
-  flex-direction: column;
-  gap: 14px;
-  padding: 0;
+  display: none;
+}
+.session-sidebar.is-collapsed .session-edge-toggle {
+  right: -22px;
 }
 .session-avatar {
   flex-shrink: 0;
