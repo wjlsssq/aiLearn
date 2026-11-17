@@ -29,8 +29,8 @@
 }
 .workspace-label small {
   display: block;
-  color: #9da5b2;
-  font-size: 8px;
+  color: #7b8494;
+  font-size: 9px;
   letter-spacing: 1px;
   margin-top: 4px;
 }
@@ -51,8 +51,11 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4aab89;
+  background: #d1a451;
   margin-left: auto;
+}
+.workspace-dot.connected {
+  background: #4aab89;
 }
 .nav-caption {
   color: #6d7b91;
@@ -113,49 +116,22 @@
   display: flex;
   flex-direction: column;
 }
-.app-header {
+.mobile-navigation {
+  display: none;
   flex-shrink: 0;
-  height: 64px;
+  height: 48px;
   background: white;
   border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0 27px;
+  gap: 10px;
+  padding: 0 14px;
 }
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  color: #b5bbc5;
-}
-.header-title > span {
-  font-size: 11px;
-  color: #6d7b91;
-}
-.header-title h1 {
+.mobile-navigation h1 {
   font-size: 13px;
   margin: 0;
   font-weight: 600;
   color: #344052;
 }
-.connection-status {
-  font-size: 10px;
-  color: #7d8897;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.connection-status i {
-  width: 6px;
-  height: 6px;
-  background: #d1a451;
-  border-radius: 50%;
-}
-.connection-status i.connected {
-  background: #54ac8b;
-}
-.mobile-menu,
 .nav-mask {
   display: none;
 }

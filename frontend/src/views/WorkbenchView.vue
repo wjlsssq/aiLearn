@@ -4,7 +4,6 @@ import AppIcon from '../components/common/AppIcon.vue'
 import SessionSidebar from '../components/workbench/SessionSidebar.vue'
 import LoginForm from '../components/workbench/LoginForm.vue'
 import ChatPanel from '../components/workbench/ChatPanel.vue'
-import OrderPanel from '../components/workbench/OrderPanel.vue'
 import OrdersView from './OrdersView.vue'
 import KnowledgeView from './KnowledgeView.vue'
 import { useWorkbench } from '../composables/useWorkbench'
@@ -12,7 +11,6 @@ const state = useWorkbench()
 const work = reactive(state)
 const page = ref<'conversations' | 'orders' | 'knowledge'>('conversations')
 const mobileNav = ref(false)
-const contextVisible = ref(true)
 const titles = { conversations: '会话工作台', orders: '订单中心', knowledge: '规则文档' }
 const sessionTitle = computed(
   () => work.sessions.find((s) => s.id === work.sessionId)?.title ?? '新会话',
@@ -24,10 +22,6 @@ watch(state.token, () => {
 function navigate(next: typeof page.value) {
   page.value = next
   mobileNav.value = false
-}
-function toggleContext() {
-  if (window.matchMedia('(max-width: 1050px)').matches) page.value = 'orders'
-  else contextVisible.value = !contextVisible.value
 }
 function askOrder(number?: string) {
   page.value = 'conversations'
@@ -51,6 +45,7 @@ function prepareDraft() {
     class="app-shell"
   >
     <nav
+      id="business-navigation"
       class="app-nav"
       :class="{ 'is-open': mobileNav }"
       aria-label="业务导航"
@@ -75,9 +70,13 @@ function prepareDraft() {
         <span class="workspace-avatar">S</span>
         <div>
           服务工作台
-          <small>WORKSPACE</small>
+          <small>{{ work.status }}</small>
         </div>
-        <span class="workspace-dot" />
+        <span
+          class="workspace-dot"
+          :class="{ connected: work.modelConfigured }"
+          aria-hidden="true"
+        />
       </div>
       <p class="nav-caption">工作空间</p>
       <button
@@ -126,27 +125,21 @@ function prepareDraft() {
       aria-label="关闭导航"
       @click="mobileNav = false"
     />
-    <main class="app-main">
-      <header class="app-header">
-        <div class="header-title">
-          <button
-            class="icon-button mobile-menu"
-            aria-label="打开导航"
-            @click="mobileNav = true"
-          >
-            <AppIcon name="menu" />
-          </button>
-          <span>工作空间</span>
-          <AppIcon
-            name="chevron"
-            :size="14"
-          />
-          <h1>{{ titles[page] }}</h1>
-        </div>
-        <div class="connection-status">
-          <i :class="{ connected: work.modelConfigured }" />
-          {{ work.status }}
-        </div>
+    <main
+      class="app-main"
+      :aria-label="titles[page]"
+    >
+      <header class="mobile-navigation">
+        <button
+          class="icon-button"
+          aria-label="打开导航"
+          aria-controls="business-navigation"
+          :aria-expanded="mobileNav"
+          @click="mobileNav = true"
+        >
+          <AppIcon name="menu" />
+        </button>
+        <h1>{{ titles[page] }}</h1>
       </header>
       <div
         v-if="page === 'conversations'"
@@ -170,14 +163,6 @@ function prepareDraft() {
           @send="work.send"
           @stop="work.stop"
           @retry="work.retry"
-          @toggle-context="toggleContext"
-          @draft="prepareDraft"
-        />
-        <OrderPanel
-          v-if="contextVisible"
-          :orders="work.orders"
-          :ready="work.modelConfigured"
-          @query="askOrder"
           @draft="prepareDraft"
         />
       </div>

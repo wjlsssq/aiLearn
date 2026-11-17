@@ -14,13 +14,6 @@
   .session-sidebar {
     width: 205px;
   }
-  .context-panel {
-    width: 245px;
-  }
-  .context-section {
-    padding-left: 15px;
-    padding-right: 15px;
-  }
   .messages {
     padding: 22px;
   }
@@ -29,9 +22,6 @@
   }
 }
 @media (max-width: 1050px) {
-  .context-panel {
-    display: none;
-  }
   .app-nav {
     width: 185px;
   }
@@ -63,25 +53,11 @@
     background: #1f2d4d55;
     z-index: 19;
   }
-  .mobile-menu {
-    display: inline-flex;
-  }
-  .app-header {
-    padding: 0 14px;
-    height: 55px;
-  }
-  .header-title > span,
-  .header-title > svg {
-    display: none;
-  }
-  .header-title {
-    gap: 8px;
+  .mobile-navigation {
+    display: flex;
   }
   .session-sidebar {
     width: 190px;
-  }
-  .context-panel {
-    display: none;
   }
   .page-content {
     padding: 23px 16px;
@@ -189,9 +165,6 @@
   }
   .composer-bottom > span {
     font-size: 8px;
-  }
-  .connection-status {
-    font-size: 9px;
   }
   .page-heading {
     flex-wrap: wrap;

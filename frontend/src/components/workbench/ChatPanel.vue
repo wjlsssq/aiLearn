@@ -16,7 +16,6 @@ const emit = defineEmits<{
   send: []
   stop: []
   retry: [id: string]
-  'toggle-context': []
   draft: []
 }>() // 展示组件只发事件。
 const messagesElement = ref<HTMLElement | null>(null)
@@ -61,13 +60,6 @@ watch(
           </small>
         </div>
       </div>
-      <button
-        class="icon-button"
-        aria-label="切换订单上下文"
-        @click="emit('toggle-context')"
-      >
-        <AppIcon name="orders" />
-      </button>
     </div>
     <div
       v-if="!ready"
