@@ -149,6 +149,7 @@ watch(
             v-for="(result, resultIndex) in message.artifacts"
             :key="resultIndex"
             :result="result"
+            :download-enabled="message.status === 'complete'"
           />
           <div
             v-if="message.role === 'assistant' && message.error"

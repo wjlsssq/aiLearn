@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ChatArtifact } from '../../types/agent'
-defineProps<{ result: ChatArtifact }>()
+import { useOrderExport } from '../../composables/useOrderExport'
+const { downloading, error, download } = useOrderExport()
+defineProps<{ result: ChatArtifact; downloadEnabled?: boolean }>()
 const columnLabels: Record<string, string> = {
   order_no: '订单编号',
   product: '商品',
@@ -63,6 +65,31 @@ const fieldLabels: Record<string, string> = {
       <p v-else>当前账号没有符合条件的订单。</p>
       <small v-if="result.truncated">仅显示部分结果，可补充条件缩小范围。</small>
     </template>
+    <div
+      v-else-if="result.kind === 'export'"
+      class="export-card"
+    >
+      <strong>{{ result.filename }}</strong>
+      <p>{{ result.row_count }} 笔订单 · Excel 文件</p>
+      <small>
+        有效期至
+        {{ new Date((result.expires_at ?? 0) * 1000).toLocaleString('zh-CN') }}，过期后可重新导出。
+      </small>
+      <el-button
+        type="primary"
+        :loading="downloading"
+        :disabled="!downloadEnabled || !result.export_id"
+        @click="download(result.export_id!, result.filename!)"
+      >
+        {{ downloadEnabled ? '下载 Excel' : '回复完成后可下载' }}
+      </el-button>
+      <p
+        v-if="error"
+        role="alert"
+      >
+        {{ error }}
+      </p>
+    </div>
     <dl v-else-if="result.draft">
       <div>
         <dt>订单编号</dt>

@@ -65,3 +65,9 @@ export async function requestStream(
     reader.releaseLock()
   }
 }
+
+// 二进制下载沿用同一认证和 HTTP 错误处理，不把令牌写入下载 URL。
+export async function requestBlob(path: string, signal: AbortSignal): Promise<Blob> {
+  const response = await fetchResponse(path, undefined, signal)
+  return response.blob()
+}

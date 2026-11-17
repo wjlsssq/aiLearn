@@ -230,6 +230,68 @@ def decode(response):
 
 
 @pytest.mark.parametrize("provider", ["deepseek", "openai_compatible"])
+@pytest.mark.parametrize("finish", ["stop", "length"])
+def test_excel_tool_persists_download_card_only_for_completed_turn(
+    agent_case, monkeypatch, provider, finish
+):
+    from backend.app.models import OrderExport
+
+    client, (alice, bob), question, install, requests, _ = agent_case
+    created = []
+    original = agent_chat.create_export
+
+    def record_export(*args):
+        artifact = original(*args)
+        created.append(artifact.export_id)
+        return artifact
+
+    monkeypatch.setattr(agent_chat, "create_export", record_export)
+    install(
+        lambda _, index: (
+            {
+                "calls": [
+                    call(
+                        name="export_orders_excel",
+                        arguments={
+                            "start_date": "2026-10-01",
+                            "end_date": "2026-10-31",
+                        },
+                    )
+                ]
+            }
+            if index == 1
+            else {"text": "已生成，请在卡片下载。", "finish": finish}
+        ),
+        provider,
+    )
+    try:
+        events = decode(
+            client.post("/api/chat/stream", headers=alice, json={"message": question})
+        )
+        assert len(created) == 1
+        url = f"/api/order-exports/{created[0]}/download"
+        response = client.get(url, headers=alice)
+        if finish == "stop":
+            assert events[-1][0] == "done", events
+            artifact = events[-1][1]["artifacts"][0]
+            assert artifact["kind"] == "export" and artifact["export_id"] == created[0]
+            history = client.get(
+                f"/api/sessions/{events[-1][1]['session_id']}/messages", headers=alice
+            ).json()
+            assert history[-1]["artifacts"][0] == artifact
+            assert response.status_code == 200 and response.content.startswith(b"PK")
+        else:
+            assert events[-1][0] == "error" and response.status_code == 404
+        assert client.get(url, headers=bob).status_code == 404
+        # 工具回传只含文件摘要，不把二进制或订单全集塞回模型上下文。
+        tool = json.loads(requests[1]["messages"][-1]["content"])
+        assert tool["status"] == "ok" and "row_count" in tool and "payload" not in tool
+    finally:
+        with SessionLocal.begin() as db:
+            db.execute(delete(OrderExport).where(OrderExport.id.in_(created)))
+
+
+@pytest.mark.parametrize("provider", ["deepseek", "openai_compatible"])
 def test_chat_queries_persists_cards_and_recovers_history(agent_case, provider):
     client, (alice, bob), question, install, requests, _ = agent_case
     install(

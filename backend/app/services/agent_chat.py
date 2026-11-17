@@ -18,6 +18,7 @@ from ..schemas.agent import ChatArtifact
 from ..schemas.draft import DraftInput
 from .agent_query import execute_order_query
 from .draft import make_draft
+from .order_export import create_export
 
 
 async def run_chat_agent(user_id: int, content: str, *, history=None, **options):
@@ -25,6 +26,7 @@ async def run_chat_agent(user_id: int, content: str, *, history=None, **options)
     artifacts = []
     tool_calls = 0
     draft_used = False
+    export_used = False
 
     def reserve_tool():
         nonlocal tool_calls
@@ -94,9 +96,35 @@ async def run_chat_agent(user_id: int, content: str, *, history=None, **options)
             )
         return result.model_dump(mode="json")
 
+    async def export(filters):
+        nonlocal export_used
+        reserve_tool()
+        if export_used:
+            return {
+                "status": "rejected",
+                "message": "每轮最多生成一个导出文件，请另发一条需求",
+            }
+        export_used = True
+        try:
+            artifact = await run_in_threadpool(
+                create_export, user_id, request_id, filters
+            )
+        except BusinessError as error:
+            return {"status": "rejected", "message": error.message}
+        except SQLAlchemyError as error:
+            logging.getLogger(__name__).warning("导出失败：%s", type(error).__name__)
+            return {"status": "unavailable", "message": "导出服务暂不可用，请稍后重试"}
+        await publish(artifact)
+        return {
+            "status": "ok",
+            "message": "Excel 已生成，问答完成后可在文件卡片下载，有效24小时",
+            "row_count": artifact.row_count,
+            "filename": artifact.filename,
+        }
+
     messages = build_chat_messages(content, history=history, **options)
     async with aclosing(
-        stream_agent(messages, create_service_tools(query, draft))
+        stream_agent(messages, create_service_tools(query, draft, export))
     ) as events:
         async for name, data in events:
             if name == "answer":

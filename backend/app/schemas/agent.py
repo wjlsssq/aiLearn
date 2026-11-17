@@ -25,10 +25,14 @@ class QueryResult(BaseModel):
 
 
 class ChatArtifact(BaseModel):
-    kind: Literal["orders", "draft"]
+    kind: Literal["orders", "draft", "export"]
     title: str
     columns: list[str] = Field(default_factory=list)
     rows: list[list[str | int | float | None]] = Field(default_factory=list)
     truncated: bool = False
     draft: AfterSalesDraft | None = None
     missing_fields: list[str] = Field(default_factory=list)
+    export_id: str | None = None
+    filename: str | None = None
+    row_count: int | None = None
+    expires_at: int | None = None

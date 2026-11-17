@@ -7,10 +7,13 @@ from langchain_core.tools import StructuredTool
 from langgraph.config import get_stream_writer
 
 from ...schemas.agent import OrderQueryInput, PrepareAfterSalesInput
+from ...schemas.order_export import OrderExportInput
 
 
 def create_service_tools(
-    query: Callable[[str], Awaitable[dict]], draft: Callable[[], Awaitable[dict]]
+    query: Callable[[str], Awaitable[dict]],
+    draft: Callable[[], Awaitable[dict]],
+    export=None,
 ):
     async def query_my_orders(sql: str) -> dict:
         writer = get_stream_writer()
@@ -22,7 +25,7 @@ def create_service_tools(
         writer({"event": "activity", "data": {"label": "正在整理售后资料"}})
         return await draft()
 
-    return [
+    tools = [
         StructuredTool.from_function(
             coroutine=query_my_orders,
             name="query_my_orders",
@@ -46,3 +49,22 @@ def create_service_tools(
             handle_validation_error="本工具不接受参数，用户原文由后端提供。",
         ),
     ]
+
+    if export is not None:
+
+        async def export_orders_excel(**arguments):
+            get_stream_writer()(
+                {"event": "activity", "data": {"label": "正在生成订单 Excel"}}
+            )
+            return await export(OrderExportInput.model_validate(arguments))
+
+        tools.append(
+            StructuredTool.from_function(
+                coroutine=export_orders_excel,
+                name="export_orders_excel",
+                args_schema=OrderExportInput,
+                description="按时间范围导出当前账号订单到 Excel。必须提供 start_date/end_date（YYYY-MM-DD，包含首尾天），默认按下单 created_at 筛选；date_field 也可选 paid_at/shipped_at/delivered_at。status 为状态精确匹配，product 为商品包含文本，可省略。不接受 SQL、身份或路径。一次最多 366 天、5000 笔，超限需缩小范围，不导出截断文件；文件有效24小时。日期不清楚先询问用户，不能自行编造；返回的文件卡片即下载入口。",
+                handle_validation_error="导出参数无效，请检查日期范围和筛选字段；不要传入 SQL 或身份。",
+            )
+        )
+    return tools

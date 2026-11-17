@@ -65,6 +65,7 @@ def test_agent_migration_accepts_old_and_fresh_baseline(current_baseline):
         schema = inspect(target)
         assert "agent_order_data" in schema.get_view_names()
         assert "agent_query_audits" in schema.get_table_names()
+        assert "order_exports" in schema.get_table_names()
         assert any(
             column["name"] == "artifacts" and column["nullable"]
             for column in schema.get_columns("chat_messages")
@@ -72,7 +73,7 @@ def test_agent_migration_accepts_old_and_fresh_baseline(current_baseline):
         with target.connect() as db:
             assert (
                 db.scalar(text("SELECT version_num FROM alembic_version"))
-                == "0003_order_details"
+                == "0004_order_exports"
             )
     finally:
         target.dispose()

@@ -2,6 +2,7 @@
 
 from .knowledge import KnowledgeDocument, KnowledgeDocumentVersion, KnowledgeChunk
 from .agent import AgentQueryAudit
+from .order_export import OrderExport
 
 from .entities import (
     AccessToken,
@@ -13,6 +14,7 @@ from .entities import (
 
 __all__ = [
     "AgentQueryAudit",
+    "OrderExport",
     "KnowledgeDocument",
     "KnowledgeDocumentVersion",
     "KnowledgeChunk",
