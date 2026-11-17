@@ -1,7 +1,19 @@
-"""阶段 0 的最小持久化实体；后续按课程逐步扩展。"""
+"""账号、订单与会话持久化实体。"""
 
-from sqlalchemy import ForeignKey, String, Text, JSON  # 字段类型与数据库约束。
+from datetime import datetime
+from decimal import Decimal
+
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)  # 字段类型与数据库约束。
 from sqlalchemy.orm import Mapped, mapped_column  # 声明带类型的 ORM 字段。
+
 from ..db.session import Base  # 共享实体基类。
 
 
@@ -42,10 +54,69 @@ class Order(Base):  # 所有订单均为合成教学数据。
     )  # 查询必须附带此条件。
     product: Mapped[str] = mapped_column(
         String(128), comment="模拟商品名称"
-    )  # 当前阶段简化商品明细。
+    )  # 一单一商品规格；金额与收货信息为下单快照。
     status: Mapped[str] = mapped_column(
         String(32), comment="模拟订单状态"
     )  # 页面展示业务状态。
+
+    # 新字段允许为空，旧业务记录不伪造默认金额或时间；样本由脚本明确补齐。
+    quantity: Mapped[int | None] = mapped_column(
+        Integer(), nullable=True, comment="数量"
+    )
+    unit_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, comment="商品单价（元）"
+    )
+    discount_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, comment="优惠金额（元）"
+    )
+    shipping_fee: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, comment="运费（元）"
+    )
+    total_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, comment="应付金额（元）"
+    )
+    paid_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, comment="实付金额（元）"
+    )
+    refund_amount: Mapped[Decimal | None] = mapped_column(
+        Numeric(12, 2), nullable=True, comment="已退款金额（元）"
+    )
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(), nullable=True, comment="下单时间"
+    )
+    paid_at: Mapped[datetime | None] = mapped_column(
+        DateTime(), nullable=True, comment="付款时间"
+    )
+    shipped_at: Mapped[datetime | None] = mapped_column(
+        DateTime(), nullable=True, comment="发货时间"
+    )
+    delivered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(), nullable=True, comment="签收时间"
+    )
+    recipient_name: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="合成收货人"
+    )
+    recipient_phone: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="合成联系电话"
+    )
+    province: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="收货省份"
+    )
+    city: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="收货城市"
+    )
+    district: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, comment="收货区县"
+    )
+    address: Mapped[str | None] = mapped_column(
+        String(256), nullable=True, comment="收货详细地址"
+    )
+    shipping_company: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="物流公司"
+    )
+    tracking_no: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, comment="合成物流单号"
+    )
 
 
 class ChatSession(Base):  # 会话列表按用户隔离。

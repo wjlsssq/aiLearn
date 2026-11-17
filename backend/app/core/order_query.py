@@ -8,7 +8,30 @@ import sqlglot
 from sqlglot import exp
 from sqlglot.errors import ParseError, TokenError
 
-VISIBLE_COLUMNS = {"order_no", "product", "status"}
+VISIBLE_COLUMNS = {
+    "city",
+    "delivered_at",
+    "quantity",
+    "tracking_no",
+    "shipping_fee",
+    "total_amount",
+    "shipping_company",
+    "paid_at",
+    "address",
+    "recipient_name",
+    "paid_amount",
+    "created_at",
+    "discount_amount",
+    "product",
+    "status",
+    "district",
+    "province",
+    "order_no",
+    "refund_amount",
+    "shipped_at",
+    "recipient_phone",
+    "unit_price",
+}
 MAX_ROWS = 50
 ALLOWED_NODES = {
     exp.Select,
@@ -45,6 +68,8 @@ ALLOWED_NODES = {
     exp.Between,
     exp.Is,
     exp.Count,
+    exp.Sum,
+    exp.Avg,
     exp.Min,
     exp.Max,
     exp.Lower,
@@ -74,7 +99,7 @@ def compile_order_query(sql: str, user_id: int) -> CompiledOrderQuery:
         type(node) not in ALLOWED_NODES or node.comments for node in nodes
     ):
         raise ValueError(
-            "只支持单表筛选、排序、分组、COUNT/MIN/MAX；不支持注释、子查询、联表或其他函数"
+            "只支持单表筛选、排序、分组、COUNT/SUM/AVG/MIN/MAX；不支持注释、子查询、联表或其他函数"
         )
     tables = list(query.find_all(exp.Table))
     if (
@@ -104,7 +129,7 @@ def compile_order_query(sql: str, user_id: int) -> CompiledOrderQuery:
             and not is_output_alias
             and not isinstance(column.this, exp.Star)
         ):
-            raise ValueError("可查询字段仅为 order_no、product、status")
+            raise ValueError("字段不在订单业务白名单中，请按工具说明选择")
     # SELECT * 展开为公开列；COUNT(*) 保留，仅针对强制用户范围统计。
     projections = []
     for index, item in enumerate(query.expressions):
@@ -151,7 +176,7 @@ def compile_order_query(sql: str, user_id: int) -> CompiledOrderQuery:
     if offset:
         query.offset(offset, copy=False)
     scoped = sqlglot.parse_one(
-        "SELECT order_no, product, status FROM agent_order_data WHERE user_id = 0",
+        "SELECT order_no, product, status, quantity, unit_price, discount_amount, shipping_fee, total_amount, paid_amount, refund_amount, created_at, paid_at, shipped_at, delivered_at, recipient_name, recipient_phone, province, city, district, address, shipping_company, tracking_no FROM agent_order_data WHERE user_id = 0",
         read="mysql",
     )
     scoped.args["where"].this.set("expression", exp.Placeholder(this="actor_id"))

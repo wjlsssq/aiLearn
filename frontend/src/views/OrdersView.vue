@@ -5,6 +5,10 @@ import type { Order } from '../types/api'
 const props = defineProps<{ orders: Order[]; ready: boolean }>()
 const emit = defineEmits<{ query: [number?: string] }>()
 const search = ref('')
+const money = (value: string | null) => (value == null ? '未记录' : `¥${Number(value).toFixed(2)}`)
+const time = (value: string | null) => value?.replace('T', ' ') ?? '未记录'
+const destination = (order: Order) =>
+  [order.province, order.city, order.district, order.address].filter(Boolean).join('') || '未记录'
 const filtered = computed(() =>
   props.orders.filter((o) =>
     `${o.order_no} ${o.product}`.toLowerCase().includes(search.value.trim().toLowerCase()),
@@ -80,6 +84,51 @@ const filtered = computed(() =>
             </template>
           </el-table-column>
           <el-table-column
+            label="数量 / 单价"
+            min-width="130"
+          >
+            <template #default="{ row }">
+              {{ row.quantity ?? '—' }} / {{ money(row.unit_price) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="应付 / 实付"
+            min-width="165"
+          >
+            <template #default="{ row }">
+              {{ money(row.total_amount) }} / {{ money(row.paid_amount) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="下单时间"
+            min-width="175"
+          >
+            <template #default="{ row }">{{ time(row.created_at) }}</template>
+          </el-table-column>
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div class="order-detail">
+                <p>
+                  收货人：{{ row.recipient_name ?? '未记录' }} ·
+                  {{ row.recipient_phone ?? '未记录' }}
+                </p>
+                <p>收货地址：{{ destination(row) }}</p>
+                <p>
+                  优惠：{{ money(row.discount_amount) }} · 运费：{{ money(row.shipping_fee) }} ·
+                  已退：{{ money(row.refund_amount) }}
+                </p>
+                <p>
+                  付款：{{ time(row.paid_at) }} · 发货：{{ time(row.shipped_at) }} · 签收：{{
+                    time(row.delivered_at)
+                  }}
+                </p>
+                <p>
+                  物流：{{ row.shipping_company ?? '未发货' }} · {{ row.tracking_no ?? '暂无运单' }}
+                </p>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column
             label="操作"
             width="115"
             align="right"
@@ -107,7 +156,23 @@ const filtered = computed(() =>
             <strong>{{ order.product }}</strong>
             <span class="status-pill">{{ order.status }}</span>
           </div>
-          <p>{{ order.order_no }}</p>
+          <p>{{ order.order_no }} · {{ order.quantity ?? '—' }} 件</p>
+          <p>实付 {{ money(order.paid_amount) }} · 下单 {{ time(order.created_at) }}</p>
+          <details class="order-detail">
+            <summary>订单明细与收货信息</summary>
+            <p>单价 {{ money(order.unit_price) }} · 应付 {{ money(order.total_amount) }}</p>
+            <p>
+              优惠 {{ money(order.discount_amount) }} · 运费 {{ money(order.shipping_fee) }} · 已退
+              {{ money(order.refund_amount) }}
+            </p>
+            <p>{{ order.recipient_name ?? '未记录' }} · {{ order.recipient_phone ?? '未记录' }}</p>
+            <p>{{ destination(order) }}</p>
+            <p>
+              付款 {{ time(order.paid_at) }} · 发货 {{ time(order.shipped_at) }} · 签收
+              {{ time(order.delivered_at) }}
+            </p>
+            <p>{{ order.shipping_company ?? '未发货' }} · {{ order.tracking_no ?? '暂无运单' }}</p>
+          </details>
           <el-button
             link
             type="primary"

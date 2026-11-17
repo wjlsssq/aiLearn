@@ -235,3 +235,15 @@
   overflow-wrap: anywhere;
   line-height: 2;
 }
+
+.order-detail {
+  padding: 12px 24px;
+  color: #667388;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.order-detail summary {
+  cursor: pointer;
+  color: #5475bd;
+}

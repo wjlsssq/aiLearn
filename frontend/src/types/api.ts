@@ -8,6 +8,25 @@ export interface Order {
   order_no: string
   product: string
   status: string
+  quantity: number | null
+  unit_price: string | null
+  discount_amount: string | null
+  shipping_fee: string | null
+  total_amount: string | null
+  paid_amount: string | null
+  refund_amount: string | null
+  created_at: string | null
+  paid_at: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+  recipient_name: string | null
+  recipient_phone: string | null
+  province: string | null
+  city: string | null
+  district: string | null
+  address: string | null
+  shipping_company: string | null
+  tracking_no: string | null
 } // 当前用户订单。
 export interface ChatSession {
   id: number

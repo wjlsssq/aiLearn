@@ -34,6 +34,13 @@ def test_agent_migration_accepts_old_and_fresh_baseline(current_baseline):
         if not current_baseline:
             with target.begin() as db:
                 db.execute(text("ALTER TABLE chat_messages DROP COLUMN artifacts"))
+        if not current_baseline:
+            from backend.app.schemas.order import OrderResponse
+
+            legacy = {"order_no", "product", "status"}
+            with target.begin() as db:
+                for column in set(OrderResponse.model_fields) - legacy:
+                    db.execute(text(f"ALTER TABLE orders DROP COLUMN `{column}`"))
         environment = {**os.environ, "DB_NAME": name}
         for _ in range(2):
             process = subprocess.run(
@@ -65,7 +72,7 @@ def test_agent_migration_accepts_old_and_fresh_baseline(current_baseline):
         with target.connect() as db:
             assert (
                 db.scalar(text("SELECT version_num FROM alembic_version"))
-                == "0002_agent_chat"
+                == "0003_order_details"
             )
     finally:
         target.dispose()

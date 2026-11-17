@@ -1,6 +1,7 @@
 """只读查询与查询审计的数据访问。"""
 
 import time
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import text, update
@@ -58,7 +59,10 @@ def query_orders(compiled: CompiledOrderQuery) -> tuple[list[str], list[list], b
         result = db.execute(text(compiled.sql), compiled.parameters)
         columns = list(result.keys())
         rows = [
-            [str(value) if isinstance(value, Decimal) else value for value in row]
+            [
+                str(value) if isinstance(value, (Decimal, datetime, date)) else value
+                for value in row
+            ]
             for row in result
         ]
     return columns, rows[: compiled.limit], len(rows) > compiled.limit

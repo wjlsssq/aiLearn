@@ -16,8 +16,9 @@ from backend.app.core.config import PROJECT_ROOT, settings
 from backend.app.core.security import hash_password
 from backend.app.db.session import SessionLocal, engine
 from backend.app.models import Order, User
+from scripts.business_order_details import build_details
 
-# 合成商品只使用现有 product 字段；不伪造尚未建模的金额、时间或物流轨迹。
+# 合成商品与订单明细共同生成，金额和生命周期由纯函数保证一致性。
 PRODUCTS = (
     "无线降噪耳机",
     "开放式蓝牙耳机",
@@ -214,6 +215,7 @@ def insert_orders(
                     "user_id": user_ids[order.username],
                     "product": order.product,
                     "status": order.status,
+                    **build_details(order.order_no, order.status, order.product),
                 }
                 for order in orders[offset : offset + 1000]
             ],

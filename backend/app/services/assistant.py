@@ -81,7 +81,7 @@ def query_order(user_id: int, body: OrderAssistantInput) -> OrderAssistantRespon
                     status="error", message="订单查询暂时失败，请稍后重试"
                 )
     tool_message = ToolMessage(
-        content=json.dumps(result.model_dump(), ensure_ascii=False),
+        content=json.dumps(result.model_dump(mode="json"), ensure_ascii=False),
         tool_call_id=call["id"],  # 原调用 ID 对应原 assistant 消息，不能重造身份。
     )
     try:
