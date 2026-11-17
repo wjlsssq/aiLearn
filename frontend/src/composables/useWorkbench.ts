@@ -140,17 +140,30 @@ export function useWorkbench() {
     turn.assistant.status = 'pending'
     turn.assistant.content = ''
     turn.assistant.error = undefined
+    turn.assistant.artifacts = []
+    turn.assistant.activity = '正在理解需求'
     let saved = false
     try {
       await streamMessage(turn.question, turn.sessionId, requestController.signal, (event) => {
         if (version !== conversationVersion) return // 旧会话或旧身份不能更新当前页面。
         if (event.event === 'delta') {
+          turn.assistant.activity = ''
           turn.assistant.status = 'streaming'
           turn.assistant.content += event.data.text // 每收到一块就显示，不在前端模拟打字。
+        } else if (event.event === 'activity') {
+          turn.assistant.activity = event.data.label
+        } else if (event.event === 'answer_reset') {
+          turn.assistant.content = ''
+          turn.assistant.status = 'pending'
+        } else if (event.event === 'artifact') {
+          turn.assistant.artifacts.push(event.data)
+          turn.assistant.activity = '正在整理答复'
         } else if (event.event === 'done') {
           saved = true // done 表示模型结束且数据库提交成功。
           sessionId.value = event.data.session_id
           turn.assistant.content = event.data.reply // 与最终入库正文保持一致。
+          turn.assistant.artifacts = event.data.artifacts
+          turn.assistant.activity = ''
           turn.assistant.status = 'complete'
           turn.user.status = 'complete'
         }
@@ -169,6 +182,7 @@ export function useWorkbench() {
       }
     } finally {
       if (controller === requestController) {
+        turn.assistant.activity = ''
         controller = null
         sending.value = false
       }
@@ -196,12 +210,14 @@ export function useWorkbench() {
         localId: crypto.randomUUID(),
         role: 'user',
         content: question,
+        artifacts: [],
         status: 'pending',
       }),
       assistant: reactive({
         localId: crypto.randomUUID(),
         role: 'assistant',
         content: '',
+        artifacts: [],
         status: 'pending',
       }),
     }

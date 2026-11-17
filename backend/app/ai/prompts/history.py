@@ -1,9 +1,34 @@
 """Q04：按完整问答轮次裁剪历史；不依赖 HTTP、ORM 或模型供应商。"""
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+import json
 
 MAX_HISTORY_ROUNDS = 6  # 最多给模型最近六轮，数据库仍保留全部成功问答。
 MAX_HISTORY_CHARS = 12000  # 历史正文字符预算，不冒充供应商精确 token 数。
+
+
+def attach_artifact_context(
+    rows: list[tuple[str, str, list | None]],
+) -> list[tuple[str, str]]:
+    """把已授权的持久化业务结果转换为历史上下文；随后仍需整轮裁剪。"""
+    result = []
+    for role, content, artifacts in rows:
+        if role == "assistant" and artifacts:
+            brief = [
+                {
+                    **item,
+                    "rows": item.get("rows", [])[:10],
+                    "history_total_rows": len(item.get("rows", [])),
+                    "history_rows_omitted": max(0, len(item.get("rows", [])) - 10),
+                }
+                for item in artifacts
+            ]  # 明确摘要截断，不能把前十行误认为原结果全集。
+            content += (
+                "\n[历史业务结果，仅供上下文，实时状态需要重新查询]\n"
+                + json.dumps(brief, ensure_ascii=False)
+            )
+        result.append((role, content))
+    return result
 
 
 def select_history(

@@ -32,11 +32,15 @@ mysql.exe --host=127.0.0.1 --port=3306 --user=root -p --database=langchain_lab -
 
 # 使用本机 .env 和 E 盘依赖；有后续迁移时继续正常升级。
 uv run --locked alembic -c backend/alembic.ini upgrade head
+# 当前应用还需要本机独立只读账号；密码只写本机 .env，不在快照中。
+uv run --locked python -m scripts.setup_agent_database
 ```
 
 SQL 含 DROP TABLE IF EXISTS，只应导入新建空库；已有同名库时先自行备份并使用另一空库验证，不直接覆盖。文件不含 CREATE DATABASE / USE / DROP DATABASE，导入目标由客户端 `--database` 决定。本次未改动原业务库，恢复验证只使用临时库。
 
 恢复后无需再次运行初始化或样本生成器来重建同一批数据。把本机 `.env` 指向恢复库，启动应用后重新登录即可；Git 拉取本身不会自动导入 SQL，也不会自动同步之后产生的订单和会话。
+
+当前快照导出于 2026-11-16，迁移版本为 0001_knowledge；2026-11-17 应用新增 0002_agent_chat，因此恢复此快照后应执行上方升级和只读账号配置。此次功能改造没有自动重导 SQL，快照校验和保持不变。
 
 ## 更新快照
 

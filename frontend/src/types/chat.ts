@@ -1,6 +1,7 @@
 import type { Message } from './api' // UI 状态不混进后端消息 DTO。
 
 export interface ChatMessage extends Message {
+  activity?: string
   localId?: string // 本次页面中稳定的消息标识。
   status?: 'pending' | 'streaming' | 'complete' | 'error' | 'stopped'
   error?: string // 安全错误文本，不放供应商原始响应。

@@ -37,17 +37,19 @@ def list_messages(
     )  # 按写入顺序恢复。
 
 
-def recent_messages(db: Session, session_id: int, limit: int) -> list[tuple[str, str]]:
+def recent_messages(
+    db: Session, session_id: int, limit: int
+) -> list[tuple[str, str, list | None]]:
     """Service 授权后读取有限条历史；返回值脱离 ORM 会话仍可使用。"""
     rows = list(
         db.execute(
-            select(ChatMessage.role, ChatMessage.content)
+            select(ChatMessage.role, ChatMessage.content, ChatMessage.artifacts)
             .where(ChatMessage.session_id == session_id)
             .order_by(ChatMessage.id.desc())
             .limit(limit)
         )
     )  # SQL 层先限制数量，避免加载无限增长的历史。
-    return [(row.role, row.content) for row in reversed(rows)]  # 恢复正序。
+    return [(row.role, row.content, row.artifacts) for row in reversed(rows)]
 
 
 def create_session(
@@ -60,11 +62,20 @@ def create_session(
 
 
 def add_exchange(
-    db: Session, session_id: int, content: str, reply: str
+    db: Session,
+    session_id: int,
+    content: str,
+    reply: str,
+    artifacts: list | None = None,
 ) -> None:  # 成对写入用户消息和回复。
     db.add_all(
         [
             ChatMessage(session_id=session_id, role="user", content=content),
-            ChatMessage(session_id=session_id, role="assistant", content=reply),
+            ChatMessage(
+                session_id=session_id,
+                role="assistant",
+                content=reply,
+                artifacts=artifacts or None,
+            ),
         ]
     )  # 提交由 Service 统一控制。

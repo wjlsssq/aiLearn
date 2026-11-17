@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppIcon from '../common/AppIcon.vue'
+import ChatResult from '../agent/ChatResult.vue'
 import { ref, watch, nextTick } from 'vue' // 增量更新时按用户阅读位置滚动。
 import type { ChatMessage } from '../../types/chat' // 消息正文与本地发送状态。
 const props = defineProps<{
@@ -39,7 +40,7 @@ watch(
   { flush: 'post' },
 )
 watch(
-  () => props.history.at(-1)?.content,
+  () => [props.history.at(-1)?.content, props.history.at(-1)?.artifacts.length],
   async () => {
     await nextTick()
     if (followLatest.value) scrollToLatest() // 布局更新后再确认，尊重用户刚发生的滚动。
@@ -98,10 +99,10 @@ watch(
         <h2>你好，今天需要处理什么？</h2>
         <p>梳理服务问题，准备回复，让每个下一步更清晰。</p>
         <div class="suggestion-grid">
-          <button @click="input = '帮我整理一份商品故障需要补充的信息清单。'">
+          <button @click="input = '请按状态统计我的订单数量。'">
             <AppIcon name="file" />
-            <strong>梳理问题信息</strong>
-            <span>整理客户描述与待补充材料</span>
+            <strong>查询与统计订单</strong>
+            <span>按商品、状态筛选或汇总</span>
             <AppIcon
               name="arrow"
               :size="16"
@@ -150,8 +151,13 @@ watch(
             role="status"
           >
             <span class="waiting-dot" />
-            正在准备回复…
+            {{ message.activity || '正在准备回复…' }}
           </p>
+          <ChatResult
+            v-for="(result, resultIndex) in message.artifacts"
+            :key="resultIndex"
+            :result="result"
+          />
           <div
             v-if="message.role === 'assistant' && message.error"
             class="message-feedback"

@@ -1,3 +1,4 @@
+import type { ChatArtifact } from './agent'
 // 与后端响应 DTO 对应的共享类型。
 export interface LoginResponse {
   token: string
@@ -15,6 +16,7 @@ export interface ChatSession {
 export interface Message {
   role: string
   content: string
+  artifacts: ChatArtifact[]
 } // 单条历史消息。
 export interface ChatResponse {
   session_id: number
@@ -22,10 +24,14 @@ export interface ChatResponse {
   mode: string
   model: string | null // 实际使用的配置模型名，模拟模式为空。
   prompt_version: string // 本次请求使用的后端模板版本。
+  artifacts: ChatArtifact[]
 } // 本次问答结果。
 export type ChatStreamEvent =
   | { event: 'start'; data: Pick<ChatResponse, 'mode' | 'model' | 'prompt_version'> }
   | { event: 'delta'; data: { text: string } }
+  | { event: 'answer_reset'; data: Record<string, never> }
+  | { event: 'activity'; data: { label: string } }
+  | { event: 'artifact'; data: ChatArtifact }
   | { event: 'done'; data: ChatResponse } // 业务层只处理经过解析的流事件。
 export interface HealthResponse {
   status: string
@@ -37,10 +43,4 @@ export interface HealthResponse {
 
 export interface CurrentUser {
   username: string
-}
-export interface OrderAssistantResponse {
-  status: 'complete' | 'blocked' | 'failed'
-  answer: string | null
-  order: Order | null
-  message: string
 }

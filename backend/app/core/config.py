@@ -14,6 +14,9 @@ class Settings(BaseSettings):  # 配置对象在启动时执行类型校验。
     db_user: str = "root"  # 教学环境连接账号。
     db_password: str = ""  # 实际密码从 .env 加载。
     db_name: str = "langchain_lab"  # 独立教学数据库。
+    agent_db_user: str = "shopmind_agent_ro"  # 工具使用独立只读连接，绝不退回业务账号。
+    agent_db_password: SecretStr = SecretStr("")
+    agent_query_timeout_ms: int = Field(default=2000, ge=100, le=5000)
     chat_mode: Literal["mock", "llm"] = (
         "mock"  # 显式选择模拟或真实模型，失败时不自动切换。
     )

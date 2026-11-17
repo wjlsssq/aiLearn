@@ -1,6 +1,6 @@
 """阶段 0 的最小持久化实体；后续按课程逐步扩展。"""
 
-from sqlalchemy import ForeignKey, String, Text  # 字段类型与数据库约束。
+from sqlalchemy import ForeignKey, String, Text, JSON  # 字段类型与数据库约束。
 from sqlalchemy.orm import Mapped, mapped_column  # 声明带类型的 ORM 字段。
 from ..db.session import Base  # 共享实体基类。
 
@@ -73,3 +73,6 @@ class ChatMessage(Base):  # 数据库存的是历史，不代表模型已获得�
         String(16), comment="user 或 assistant"
     )  # 对话角色。
     content: Mapped[str] = mapped_column(Text, comment="消息正文")  # 保存文本。
+    artifacts: Mapped[list | None] = mapped_column(
+        JSON, nullable=True, comment="已完成回复的业务结果"
+    )

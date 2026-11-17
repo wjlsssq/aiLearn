@@ -48,7 +48,7 @@ def chat(
     responses={
         200: {
             "content": {"text/event-stream": {}},
-            "description": "start/delta/done/error 事件流",
+            "description": "聊天增量、工具进度、业务结果及完成/错误事件流",
         }
     },
 )

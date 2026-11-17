@@ -19,7 +19,7 @@ const emit = defineEmits<{ query: [orderNo?: string]; draft: [] }>()
         <span>{{ orders.length }}</span>
       </p>
       <article
-        v-for="order in orders"
+        v-for="order in orders.slice(0, 5)"
         :key="order.order_no"
         class="context-order"
       >
@@ -51,6 +51,12 @@ const emit = defineEmits<{ query: [orderNo?: string]; draft: [] }>()
       >
         当前账号暂无订单。
       </p>
+      <p
+        v-if="orders.length > 5"
+        class="muted"
+      >
+        显示前 5 笔，可在订单中心查看全部。
+      </p>
     </section>
     <section class="context-section">
       <p class="section-caption">快捷操作</p>
@@ -64,8 +70,8 @@ const emit = defineEmits<{ query: [orderNo?: string]; draft: [] }>()
           :size="18"
         />
         <span>
-          订单助手
-          <small>通过自然语言查询订单</small>
+          查询与统计订单
+          <small>在聊天中按需查询业务数据</small>
         </span>
         <AppIcon
           name="chevron"

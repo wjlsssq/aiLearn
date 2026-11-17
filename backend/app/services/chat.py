@@ -1,7 +1,11 @@
 """会话归属、消息校验和问答事务。"""
 
 from langchain_core.messages import BaseMessage  # 请求内历史快照。
-from ..ai.prompts.history import MAX_HISTORY_ROUNDS, select_history  # 有界上下文。
+from ..ai.prompts.history import (
+    MAX_HISTORY_ROUNDS,
+    select_history,
+    attach_artifact_context,
+)  # 有界上下文。
 
 from sqlalchemy.orm import Session  # 当前业务事务。
 from collections.abc import AsyncIterator  # 流式事件按需交付。
@@ -10,6 +14,7 @@ from dataclasses import dataclass  # 将预检查结果与请求数据库会话�
 import logging  # 未预期故障只记录类型，不回显供应商私密正文。
 from starlette.concurrency import run_in_threadpool  # 同步数据库写入不阻塞异步模型流。
 from ..ai.models.gateway import (
+    ModelReply,
     generate_reply,
     stream_reply,
 )  # 模型调用细节封装在 AI 集成层。
@@ -25,6 +30,7 @@ from ..schemas.chat import (
     SessionResponse,
     MessageResponse,
 )  # 聊天请求契约。
+from .agent_chat import run_chat_agent, collect_chat_agent
 
 
 def require_session(
@@ -50,7 +56,9 @@ def list_messages(
 ) -> list[MessageResponse]:  # 历史消息也要进行身份隔离。
     require_session(db, session_id, user_id)  # 先授权，再查询消息。
     return [
-        MessageResponse(role=row.role, content=row.content)
+        MessageResponse(
+            role=row.role, content=row.content, artifacts=row.artifacts or []
+        )
         for row in repository.list_messages(db, session_id)
     ]  # 返回稳定数据契约。
 
@@ -63,7 +71,9 @@ def load_history(
         return []  # 新会话不继承其他会话。
     require_session(db, session_id, user_id)  # 越权必须先于历史读取与模型请求。
     rows = repository.recent_messages(db, session_id, MAX_HISTORY_ROUNDS * 2)
-    return select_history(rows)  # 数据库保留全量，模型只获得预算内完整问答。
+    return select_history(
+        attach_artifact_context(rows)
+    )  # 业务结果在提示词层组织，Repository 仅查询数据。
 
 
 def send_message(
@@ -79,9 +89,15 @@ def send_message(
     prompt_options = body.prompt.model_dump() if body.prompt is not None else {}
     if history:
         prompt_options["history"] = history  # 空历史保持旧调用兼容。
-    result = generate_reply(
-        content, **prompt_options
-    )  # 先取得有效回复，再开始新增记录，避免失败留下空会话。
+    artifacts = []
+    if settings.chat_mode == "llm":
+        answer = collect_chat_agent(user_id, content, **prompt_options)
+        result = ModelReply(
+            text=answer["text"], mode="llm", model=settings.llm_model.strip()
+        )
+        artifacts = answer["artifacts"]
+    else:
+        result = generate_reply(content, **prompt_options)
     if body.session_id is None:  # 首次发送时创建会话。
         session = repository.create_session(
             db, user_id, content[:40]
@@ -89,7 +105,7 @@ def send_message(
     else:  # 已有会话必须先验证归属。
         session = require_session(db, body.session_id, user_id)  # 阻止跨用户写入。
     repository.add_exchange(
-        db, session.id, content, result.text
+        db, session.id, content, result.text, artifacts
     )  # 只保存已经成功生成的问答。
     db.commit()  # 会话和问答一起提交，异常由会话依赖回滚。
     return ChatResponse(
@@ -98,6 +114,7 @@ def send_message(
         mode=result.mode,
         model=result.model,
         prompt_version=result.prompt_version,
+        artifacts=artifacts,
     )  # 使用明确的响应 DTO，API 层再次验证输出契约。
 
 
@@ -126,7 +143,9 @@ def prepare_stream(db: Session, user_id: int, body: ChatInput) -> PreparedChat:
     return prepared
 
 
-def persist_stream(prepared: PreparedChat, reply: str, metadata: dict) -> ChatResponse:
+def persist_stream(
+    prepared: PreparedChat, reply: str, metadata: dict, artifacts: list | None = None
+) -> ChatResponse:
     """仅在流完整结束后成对保存问答，提交成功后才能发送 done 事件。"""
     with SessionLocal.begin() as db:
         if prepared.body.session_id is None:
@@ -135,8 +154,10 @@ def persist_stream(prepared: PreparedChat, reply: str, metadata: dict) -> ChatRe
             )
         else:
             session = require_session(db, prepared.body.session_id, prepared.user_id)
-        repository.add_exchange(db, session.id, prepared.content, reply)
-        response = ChatResponse(session_id=session.id, reply=reply, **metadata)
+        repository.add_exchange(db, session.id, prepared.content, reply, artifacts)
+        response = ChatResponse(
+            session_id=session.id, reply=reply, artifacts=artifacts or [], **metadata
+        )
     return response  # 事务上下文已经成功提交，避免把仅生成成功当作已保存。
 
 
@@ -153,14 +174,32 @@ async def stream_message(prepared: PreparedChat) -> AsyncIterator[tuple[str, dic
     if prepared.history:
         options["history"] = prepared.history  # 同步与流式共享同一裁剪规则。
     try:
-        async with aclosing(stream_reply(prepared.content, **options)) as chunks:
-            async for text in chunks:
-                parts.append(text)
-                yield "delta", {"text": text}  # 立即转发模型块，不等待完整回复。
-        reply = "".join(parts).strip()
+        artifacts = []
+        reply = None
+        if settings.chat_mode == "llm":
+            async with aclosing(
+                run_chat_agent(prepared.user_id, prepared.content, **options)
+            ) as events:
+                async for name, data in events:
+                    if name == "answer":
+                        reply, artifacts = data["text"], data["artifacts"]
+                    else:
+                        yield name, data
+        else:
+            async with aclosing(stream_reply(prepared.content, **options)) as chunks:
+                async for text in chunks:
+                    parts.append(text)
+                    yield "delta", {"text": text}
+            reply = "".join(parts).strip()
         if not reply:
             raise BusinessError(502, "模型未返回有效文本，请稍后重试")
-        response = await run_in_threadpool(persist_stream, prepared, reply, metadata)
+        response = (
+            await run_in_threadpool(
+                persist_stream, prepared, reply, metadata, artifacts
+            )
+            if artifacts
+            else await run_in_threadpool(persist_stream, prepared, reply, metadata)
+        )
         yield "done", response.model_dump()  # 到此才同时确认模型完成与 MySQL 提交。
     except BusinessError as error:
         yield "error", {"status": error.status_code, "message": error.message}

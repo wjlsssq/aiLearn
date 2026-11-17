@@ -2,6 +2,7 @@
 
 from pydantic import BaseModel, Field  # DTO 类型和输入校验。
 from .prompt import PromptOptions  # 复用预览与真实聊天的配置校验。
+from .agent import ChatArtifact
 
 
 class ChatInput(BaseModel):  # 单次聊天请求 DTO。
@@ -16,6 +17,7 @@ class ChatResponse(BaseModel):  # 聊天接口响应。
     mode: str  # 明确标注 mock 或 llm。
     model: str | None = None  # 真实调用时返回配置的模型名。
     prompt_version: str  # 返回本次使用的服务端模板版本，不由前端指定。
+    artifacts: list[ChatArtifact] = Field(default_factory=list)
 
 
 class SessionResponse(BaseModel):  # 左侧会话列表项。
@@ -26,3 +28,4 @@ class SessionResponse(BaseModel):  # 左侧会话列表项。
 class MessageResponse(BaseModel):  # 历史消息项。
     role: str  # 对话角色。
     content: str  # 对话内容。
+    artifacts: list[ChatArtifact] = Field(default_factory=list)

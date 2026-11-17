@@ -18,6 +18,7 @@ dependencies = [ # 这里只声明直接依赖，所有传递依赖的精确版�
     "openai>=2,<3", # 供应商 SDK 对照实验及标准请求异常。
     "langchain-deepseek>=1.1.1", # DeepSeek 官方服务的 LangChain 专用适配。
     "langchain-text-splitters>=1,<2", # Q07 官方递归文本切分器。
+    "sqlglot>=28,<29", # 解析 SQL 语法树，限定查询能力并强制注入用户数据范围。
 ]
 
 # 开发依赖默认随 uv sync 安装，不属于业务功能。

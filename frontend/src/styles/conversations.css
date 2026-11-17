@@ -155,6 +155,7 @@
 .chat-panel {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -306,8 +307,74 @@
   font-size: 10px;
 }
 .message-body {
-  max-width: 88%;
   min-width: 0;
+  max-width: 88%;
+}
+
+.chat-result {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-color, #fff);
+  overflow: hidden;
+}
+.chat-result header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f7f9fc;
+  font-size: 13px;
+}
+.chat-result header span,
+.chat-result small {
+  color: #64748b;
+  font-size: 12px;
+}
+.chat-result-scroll {
+  max-height: 220px;
+  overflow: auto;
+}
+.chat-result table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.chat-result th,
+.chat-result td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #edf0f5;
+  min-width: 90px;
+  max-width: 260px;
+  overflow-wrap: anywhere;
+}
+.chat-result th {
+  color: #64748b;
+  font-weight: 500;
+}
+.chat-result small,
+.chat-result > p {
+  display: block;
+  padding: 10px 14px;
+}
+.chat-result dl {
+  margin: 0;
+  padding: 10px 14px;
+}
+.chat-result dl > div {
+  display: flex;
+  gap: 14px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.chat-result dt {
+  flex: 0 0 60px;
+  color: #64748b;
+}
+.chat-result dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 .role {
   font-size: 10px;
@@ -370,6 +437,7 @@
   color: #6a89dd;
 }
 .composer-area {
+  flex-shrink: 0;
   padding: 0 24px 13px;
 }
 .composer-tools {

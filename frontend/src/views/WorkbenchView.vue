@@ -5,17 +5,11 @@ import SessionSidebar from '../components/workbench/SessionSidebar.vue'
 import LoginForm from '../components/workbench/LoginForm.vue'
 import ChatPanel from '../components/workbench/ChatPanel.vue'
 import OrderPanel from '../components/workbench/OrderPanel.vue'
-import OrderAssistant from '../components/agent/OrderAssistant.vue'
-import DraftPanel from '../components/after-sales/DraftPanel.vue'
 import OrdersView from './OrdersView.vue'
 import KnowledgeView from './KnowledgeView.vue'
 import { useWorkbench } from '../composables/useWorkbench'
-import { useOrderAssistant } from '../composables/useOrderAssistant'
-import { useAfterSalesDraft } from '../composables/useAfterSalesDraft'
 const state = useWorkbench()
 const work = reactive(state)
-const assistant = reactive(useOrderAssistant(state.token, state.logout))
-const draft = reactive(useAfterSalesDraft(state.token, state.logout))
 const page = ref<'conversations' | 'orders' | 'knowledge'>('conversations')
 const mobileNav = ref(false)
 const contextVisible = ref(true)
@@ -36,7 +30,12 @@ function toggleContext() {
   else contextVisible.value = !contextVisible.value
 }
 function askOrder(number?: string) {
-  assistant.open(number)
+  page.value = 'conversations'
+  work.input = number ? `请查询订单 ${number} 的当前状态。` : '请按状态统计我的订单数量。'
+}
+function prepareDraft() {
+  page.value = 'conversations'
+  work.input = work.input.trim() ? `请整理以下售后资料：\n${work.input}` : '请帮我整理售后资料。'
 }
 </script>
 <template>
@@ -172,14 +171,14 @@ function askOrder(number?: string) {
           @stop="work.stop"
           @retry="work.retry"
           @toggle-context="toggleContext"
-          @draft="draft.open(work.input)"
+          @draft="prepareDraft"
         />
         <OrderPanel
           v-if="contextVisible"
           :orders="work.orders"
           :ready="work.modelConfigured"
           @query="askOrder"
-          @draft="draft.open(work.input)"
+          @draft="prepareDraft"
         />
       </div>
       <OrdersView
@@ -194,24 +193,5 @@ function askOrder(number?: string) {
         :logout="work.logout"
       />
     </main>
-    <OrderAssistant
-      v-model:visible="assistant.visible"
-      v-model:question="assistant.question"
-      :busy="assistant.busy"
-      :result="assistant.result"
-      :error="assistant.error"
-      :ready="work.modelConfigured"
-      @submit="assistant.run"
-    />
-    <DraftPanel
-      v-model:visible="draft.visible"
-      v-model:description="draft.description"
-      :busy="draft.busy"
-      :report="draft.report"
-      :error="draft.error"
-      :ready="work.modelConfigured"
-      @submit="draft.run"
-      @copy="draft.copy"
-    />
   </div>
 </template>

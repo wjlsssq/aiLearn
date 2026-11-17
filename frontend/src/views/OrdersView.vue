@@ -28,7 +28,7 @@ const filtered = computed(() =>
           name="spark"
           :size="17"
         />
-        订单助手
+        在聊天中查询
       </el-button>
     </div>
     <div class="data-card">
