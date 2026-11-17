@@ -6,6 +6,7 @@
   background: #fff;
 }
 .session-sidebar {
+  position: relative;
   width: 238px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
@@ -545,9 +546,6 @@
 .session-heading h2 {
   flex: 1;
 }
-.session-toggle {
-  margin-left: 5px;
-}
 .session-sidebar.is-collapsed {
   width: 56px;
   padding: 18px 8px;
@@ -556,9 +554,6 @@
   flex-direction: column;
   gap: 14px;
   padding: 0;
-}
-.session-sidebar.is-collapsed .session-toggle {
-  margin-left: 0;
 }
 .session-avatar {
   flex-shrink: 0;
@@ -585,4 +580,71 @@
 .session-item.active .session-avatar {
   background: #dfe8ff;
   color: #5577cd;
+}
+
+/* 分隔线中点的把手独立于滚动内容，键盘聚焦时仍清晰可见。 */
+.session-edge-toggle {
+  position: absolute;
+  top: 50%;
+  right: -11px;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #e2e7f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #94a0b4;
+  box-shadow: 0 2px 6px #263e7608;
+  cursor: pointer;
+}
+.session-edge-toggle svg {
+  transform: rotate(180deg);
+}
+.session-sidebar.is-collapsed .session-edge-toggle svg {
+  transform: none;
+}
+.session-edge-toggle:hover,
+.session-edge-toggle:focus-visible {
+  color: #3864e9;
+  border-color: #b7c8f7;
+  background: #f4f7ff;
+}
+/* Chromium 使用无箭头细滑块；Firefox 保留原生细滚动条兼容。 */
+.session-list,
+.messages,
+.chat-result-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d9dfe9 transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  .session-list,
+  .messages,
+  .chat-result-scroll {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  :is(.session-list, .messages, .chat-result-scroll)::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  :is(.session-list, .messages, .chat-result-scroll)::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  :is(.session-list, .messages, .chat-result-scroll)::-webkit-scrollbar-thumb {
+    background: #dfe4ed;
+    border-radius: 8px;
+  }
+  :is(.session-list, .messages, .chat-result-scroll):hover::-webkit-scrollbar-thumb {
+    background: #bac5d5;
+  }
+  :is(.session-list, .messages, .chat-result-scroll)::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
 }

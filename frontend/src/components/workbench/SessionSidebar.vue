@@ -17,24 +17,25 @@ const filtered = computed(() =>
     :class="{ 'is-collapsed': collapsed }"
     aria-label="会话列表"
   >
+    <button
+      class="session-edge-toggle"
+      :aria-label="collapsed ? '展开会话列表' : '折叠会话列表'"
+      :title="collapsed ? '展开会话列表' : '折叠会话列表'"
+      :aria-expanded="!collapsed"
+      aria-controls="session-list-content"
+      @click="collapsed = !collapsed"
+    >
+      <AppIcon
+        name="chevron"
+        :size="18"
+      />
+    </button>
     <div class="session-heading">
       <h2 v-if="!collapsed">
         我的会话
         <span>{{ sessions.length }}</span>
       </h2>
-      <button
-        class="icon-button session-toggle"
-        :aria-label="collapsed ? '展开会话列表' : '折叠会话列表'"
-        :title="collapsed ? '展开会话列表' : '折叠会话列表'"
-        :aria-expanded="!collapsed"
-        aria-controls="session-list-content"
-        @click="collapsed = !collapsed"
-      >
-        <AppIcon
-          :name="collapsed ? 'panel-open' : 'panel-close'"
-          :size="18"
-        />
-      </button>
+
       <button
         class="icon-button"
         :disabled="busy"

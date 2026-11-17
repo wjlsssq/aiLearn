@@ -229,3 +229,22 @@
     margin-bottom: 0;
   }
 }
+
+/* 手机列表位于消息上方，把手沿水平分隔线居中，箭头改为上下方向。 */
+@media (max-width: 560px) {
+  .session-edge-toggle {
+    top: auto;
+    right: 50%;
+    bottom: -9px;
+    transform: translateX(50%);
+    width: 36px;
+    height: 18px;
+    border-radius: 6px;
+  }
+  .session-edge-toggle svg {
+    transform: rotate(-90deg);
+  }
+  .session-sidebar.is-collapsed .session-edge-toggle svg {
+    transform: rotate(90deg);
+  }
+}
