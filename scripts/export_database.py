@@ -77,6 +77,12 @@ def export_database(
         sql = (
             temporary_path.read_bytes().rstrip(b"\r\n") + b"\n"
         )  # 统一文件末尾，便于 Git 检查。
+        # 原生工具的临时视图定义含行尾空格，仅清理该结构行，不改动 INSERT 数据。
+        sql = re.sub(
+            rb"(?m)^(/\*![0-9]+ CREATE VIEW [^\r\n]*?)[ \t]+(\r?)$",
+            rb"\1\2",
+            sql,
+        )
         # 全量保留身份摘要；明文供应商密钥不属于应提交的业务数据。
         key = settings.llm_api_key.get_secret_value()
         if (len(key) >= 8 and key.encode() in sql) or re.search(

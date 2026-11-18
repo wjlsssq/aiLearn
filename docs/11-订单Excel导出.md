@@ -37,7 +37,7 @@ uv sync --locked
 uv run --locked alembic -c backend/alembic.ini upgrade head
 ```
 
-迁移版本为 `0004_order_exports`，升级后重启后端。旧全量 SQL 快照没有重新导出，恢复后同样执行迁移。生成的文件保存在各电脑自己的 MySQL 中；Git 不同步运行文件或数据库内容。
+迁移版本为 `0004_order_exports`，升级后重启后端。2026-11-18 已按用户要求重新导出全量 SQL，当前快照包含本机 Excel 快照表及数据；恢复后仍保留原到期时间。日常 Git 不自动同步新增文件或数据库内容，只有明确重导 SQL 时才包含当时的数据库快照。
 
 ## 代码与验证
 
